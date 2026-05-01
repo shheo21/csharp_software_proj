@@ -1,4 +1,4 @@
-@SubscriptionManager.api_HostAddress = http://localhost:5046
+@SubscriptionManager.api_HostAddress = http://localhost:5296
 
 GET {{SubscriptionManager.api_HostAddress}}/weatherforecast/
 Accept: application/json
