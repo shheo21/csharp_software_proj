@@ -485,3 +485,7 @@ $RECYCLE.BIN/
 .claude/
 .codex/
 .cursor/
+
+# Development files
+.vscode/
+.playwright-mcp/
