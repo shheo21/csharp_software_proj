@@ -31,7 +31,7 @@ public class Program
         app.UseAuthorization();
 
         // API 엔드포인트 자동 생성 (/login, /register 등)
-        app.MapIdentityApi<IdentityUser>();
+        //app.MapIdentityApi<IdentityUser>();
 
         app.Run();
     }

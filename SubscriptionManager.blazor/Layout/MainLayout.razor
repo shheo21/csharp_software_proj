@@ -1,4 +1,6 @@
 @inherits LayoutComponentBase
+@using SubscriptionManager.blazor.Pages
+
 
 <MudThemeProvider Theme="_darkTheme" IsDarkMode="true" />
 <MudPopoverProvider />
@@ -14,7 +16,8 @@
             <span class="gold-text">✦</span> SubTrack
         </MudText>
         <MudSpacer />
-        <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit" Class="mr-1" />
+        <!-- 기존 MudIconButton을 지우고 방금 만든 NotificationMenu를 넣습니다 -->
+        <NotificationMenu />
         <MudAvatar Color="Color.Primary" Size="Size.Small" Style="cursor:pointer; margin-right:8px;">U</MudAvatar>
     </MudAppBar>
 
