@@ -1,6 +1,6 @@
 ---
-name: 이슈 템플릿
-about: "\U0001F525 issue 규칙"
+name: 이슈 생성
+about: ""
 title: ''
 labels: ''
 assignees: ''
