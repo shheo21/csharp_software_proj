@@ -1,6 +1,6 @@
 ---
 name: 이슈 생성
-about: ""
+about: 새 이슈
 title: ''
 labels: ''
 assignees: ''
