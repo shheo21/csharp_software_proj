@@ -9,6 +9,11 @@
 # 시크릿 키가 포함된 로컬 설정 파일
 appsettings.Development.json
 
+# SQLite DB 파일 (런타임 생성)
+*.db
+*.db-shm
+*.db-wal
+
 # User-specific files
 *.rsuser
 *.suo
