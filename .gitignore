@@ -6,6 +6,9 @@
 # dotenv files
 .env
 
+# 시크릿 키가 포함된 로컬 설정 파일
+appsettings.Development.json
+
 # User-specific files
 *.rsuser
 *.suo
