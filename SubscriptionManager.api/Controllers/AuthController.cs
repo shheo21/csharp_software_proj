@@ -1,9 +1,13 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using SubscriptionManager.api.Data;
 using SubscriptionManager.api.Models;
 
 namespace SubscriptionManager.api.Controllers;
@@ -13,11 +17,13 @@ namespace SubscriptionManager.api.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly AppDbContext _db;
     private readonly IConfiguration _config;
 
-    public AuthController(UserManager<ApplicationUser> userManager, IConfiguration config)
+    public AuthController(UserManager<ApplicationUser> userManager, AppDbContext db, IConfiguration config)
     {
         _userManager = userManager;
+        _db = db;
         _config = config;
     }
 
@@ -56,16 +62,64 @@ public class AuthController : ControllerBase
         if (user == null || !await _userManager.CheckPasswordAsync(user, req.Password))
             return Unauthorized(new { message = "이메일 또는 비밀번호가 올바르지 않습니다." });
 
-        var expiresAt = DateTime.UtcNow.AddDays(7);
-        var token = GenerateJwt(user, expiresAt);
+        return Ok(await IssueTokenPair(user));
+    }
 
-        return Ok(new AuthResponse
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh([FromBody] RefreshRequest req)
+    {
+        var stored = await _db.RefreshTokens
+            .Include(t => t.User)
+            .FirstOrDefaultAsync(t => t.Token == req.RefreshToken);
+
+        if (stored == null || stored.IsRevoked || stored.ExpiresAt < DateTime.UtcNow)
+            return Unauthorized(new { message = "유효하지 않은 Refresh Token입니다." });
+
+        // 기존 토큰 폐기 후 새 쌍 발급 (Rotation)
+        stored.IsRevoked = true;
+        await _db.SaveChangesAsync();
+
+        return Ok(await IssueTokenPair(stored.User));
+    }
+
+    [Authorize]
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout([FromBody] RefreshRequest req)
+    {
+        var stored = await _db.RefreshTokens
+            .FirstOrDefaultAsync(t => t.Token == req.RefreshToken);
+
+        if (stored != null)
         {
-            Token = token,
+            stored.IsRevoked = true;
+            await _db.SaveChangesAsync();
+        }
+
+        return Ok(new { message = "로그아웃됐습니다." });
+    }
+
+    private async Task<AuthResponse> IssueTokenPair(ApplicationUser user)
+    {
+        var accessExpiresAt = DateTime.UtcNow.AddMinutes(15);
+        var accessToken = GenerateJwt(user, accessExpiresAt);
+
+        var refreshToken = new RefreshToken
+        {
+            Token = GenerateRefreshToken(),
+            UserId = user.Id,
+            ExpiresAt = DateTime.UtcNow.AddDays(30),
+        };
+        _db.RefreshTokens.Add(refreshToken);
+        await _db.SaveChangesAsync();
+
+        return new AuthResponse
+        {
+            Token = accessToken,
+            RefreshToken = refreshToken.Token,
             DisplayName = user.DisplayName,
             Email = user.Email!,
-            ExpiresAt = expiresAt,
-        });
+            ExpiresAt = accessExpiresAt,
+        };
     }
 
     private string GenerateJwt(ApplicationUser user, DateTime expiresAt)
@@ -91,4 +145,7 @@ public class AuthController : ControllerBase
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+
+    private static string GenerateRefreshToken() =>
+        Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
 }
