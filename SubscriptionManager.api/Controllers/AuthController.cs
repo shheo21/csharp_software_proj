@@ -83,6 +83,25 @@ public class AuthController : ControllerBase
     }
 
     [Authorize]
+    [HttpGet("me")]
+    public async Task<IActionResult> Me()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var user = await _userManager.FindByIdAsync(userId!);
+
+        if (user == null)
+            return Unauthorized(new { message = "유저를 찾을 수 없습니다." });
+
+        return Ok(new MeResponse
+        {
+            Id = user.Id,
+            DisplayName = user.DisplayName,
+            Email = user.Email!,
+            CreatedAt = user.CreatedAt,
+        });
+    }
+
+    [Authorize]
     [HttpPost("logout")]
     public async Task<IActionResult> Logout([FromBody] RefreshRequest req)
     {
