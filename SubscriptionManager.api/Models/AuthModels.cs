@@ -27,6 +27,14 @@ public class AuthResponse
     public DateTime ExpiresAt { get; set; }
 }
 
+public class MeResponse
+{
+    public string Id { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+}
+
 public class RefreshToken
 {
     public int Id { get; set; }

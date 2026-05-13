@@ -1,5 +1,6 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SubscriptionManager.api.Data;
@@ -64,11 +65,25 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// 시작 시 DB 자동 생성
+// 시작 시 DB 자동 생성 + Mock 유저 시드
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
+
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    const string mockEmail = "test@example.com";
+
+    if (await userManager.FindByEmailAsync(mockEmail) == null)
+    {
+        var mockUser = new ApplicationUser
+        {
+            UserName = mockEmail,
+            Email = mockEmail,
+            DisplayName = "테스트유저",
+        };
+        await userManager.CreateAsync(mockUser, "Test1234!");
+    }
 }
 
 if (app.Environment.IsDevelopment())
