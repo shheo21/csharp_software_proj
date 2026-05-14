@@ -1,0 +1,253 @@
+@page "/exchange-rates"
+@inject ISubscriptionApiService ApiService
+@inject ISnackbar Snackbar
+
+<PageTitle>환율 정보 — SubTrack</PageTitle>
+
+<div class="fade-in-up">
+    <div class="d-flex align-center justify-space-between mb-6">
+        <div>
+            <div class="page-title">실시간 환율</div>
+            <div class="page-subtitle">한국수출입은행 API 기준 · @(_lastUpdated?.ToString("HH:mm 기준") ?? "로딩 중...")</div>
+        </div>
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Refresh"
+                   OnClick="RefreshRates"
+                   Disabled="_loading"
+                   Style="border-radius:12px; font-weight:600;">
+            환율 갱신
+        </MudButton>
+    </div>
+
+    <!-- 주요 통화 하이라이트 -->
+    <MudGrid Spacing="3" Class="mb-5">
+        @foreach (var cur in _highlighted)
+        {
+            <MudItem xs="6" sm="4" md="2">
+                <div class="glass-card pa-4 d-flex flex-column align-center fade-in-up"
+                     style="text-align:center; cursor:default;">
+                    <div style="font-size:1.6rem; margin-bottom:4px;">@cur.Flag</div>
+                    <div style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:2px;">@cur.Code</div>
+                    <div style="font-size:1.1rem; font-weight:800; color:var(--gold-400);">
+                        ₩@cur.Rate.ToString("N0")
+                    </div>
+                    <div style="font-size:0.7rem; color:var(--text-secondary);">1 @cur.Code</div>
+                </div>
+            </MudItem>
+        }
+    </MudGrid>
+
+    <!-- 전체 환율 테이블 -->
+    <div class="glass-card pa-5 fade-in-up fade-in-up-2">
+        <div class="d-flex align-center mb-4">
+            <MudIcon Icon="@Icons.Material.Filled.CurrencyExchange"
+                     Style="color:var(--gold-400);" Class="mr-2" />
+            <MudText Typo="Typo.h6" Style="font-weight:700; color:var(--text-primary);">
+                전체 환율 목록
+            </MudText>
+            <MudSpacer />
+            <MudTextField @bind-Value="_rateSearch"
+                          Placeholder="통화 검색..."
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Style="max-width:200px; border-radius:10px;"
+                          Immediate="true" />
+        </div>
+
+        @if (_loading)
+        {
+            <div class="d-flex justify-center pa-8">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            </div>
+        }
+        else
+        {
+            <MudTable Items="@FilteredRates" Hover="true" Dense="false"
+                      Elevation="0" Style="background:transparent;">
+                <HeaderContent>
+                    <MudTh>
+                        <MudTableSortLabel SortBy="new Func<ExchangeRateSummary, object>(x => x.CurrencyCode)">
+                            통화 코드
+                        </MudTableSortLabel>
+                    </MudTh>
+                    <MudTh>통화명</MudTh>
+                    <MudTh>
+                        <MudTableSortLabel SortBy="new Func<ExchangeRateSummary, object>(x => x.RateToKRW)"
+                                          InitialDirection="SortDirection.Descending">
+                            매매 기준율 (원/1단위)
+                        </MudTableSortLabel>
+                    </MudTh>
+                    <MudTh>시각화</MudTh>
+                    <MudTh>갱신 시각</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>
+                        <div class="d-flex align-center gap-2">
+                            <span style="font-size:1.1rem;">@GetFlag(context.CurrencyCode)</span>
+                            <span style="font-weight:700; color:var(--text-primary); font-size:0.9rem;">@context.CurrencyCode</span>
+                        </div>
+                    </MudTd>
+                    <MudTd Style="color: var(--text-secondary); font-size:0.88rem;">@context.CurrencyName</MudTd>
+                    <MudTd>
+                        <span style="font-weight:800; color:var(--gold-400); font-size:1rem;">
+                            ₩@context.RateToKRW.ToString("N2")
+                        </span>
+                    </MudTd>
+                    <MudTd>
+                        @{
+                            var pct = _maxRate > 0 ? (double)(context.RateToKRW / _maxRate) : 0;
+                        }
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <div style="height:6px; border-radius:3px; background:var(--navy-600); width:120px; overflow:hidden;">
+                                <div style="height:100%; border-radius:3px; width:@(pct * 100)%;
+                                            background: linear-gradient(90deg, var(--gold-500), var(--accent-blue));
+                                            transition: width 0.6s ease;"></div>
+                            </div>
+                            <span style="font-size:0.72rem; color:var(--text-secondary);">@((pct * 100).ToString("F0"))%</span>
+                        </div>
+                    </MudTd>
+                    <MudTd Style="font-size:0.8rem; color:var(--text-secondary);">
+                        @context.UpdatedAt.ToString("HH:mm:ss")
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </div>
+
+    <!-- 환율 계산기 -->
+    <div class="glass-card pa-5 mt-4 fade-in-up fade-in-up-3">
+        <div class="d-flex align-center mb-4">
+            <MudIcon Icon="@Icons.Material.Filled.SwapHoriz"
+                     Style="color:var(--gold-400);" Class="mr-2" />
+            <MudText Typo="Typo.h6" Style="font-weight:700; color:var(--text-primary);">빠른 환율 계산기</MudText>
+        </div>
+        <MudGrid Spacing="3" Class="align-center">
+            <MudItem xs="12" sm="3">
+                <MudNumericField @bind-Value="_convertAmount"
+                                 Label="금액"
+                                 Variant="Variant.Outlined"
+                                 Margin="Margin.Dense"
+                                 Min="0"
+                                 Format="N2" />
+            </MudItem>
+            <MudItem xs="12" sm="3">
+                <MudSelect T="string" @bind-Value="_fromCurrency"
+                           Label="원본 통화"
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense">
+                    <MudSelectItem T="string" Value="@("USD")">🇺🇸 USD</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("EUR")">🇪🇺 EUR</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("JPY")">🇯🇵 JPY</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("GBP")">🇬🇧 GBP</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("CAD")">🇨🇦 CAD</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("AUD")">🇦🇺 AUD</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="1" Class="d-flex justify-center align-center">
+                <MudIcon Icon="@Icons.Material.Filled.ArrowForward"
+                         Style="color:var(--gold-400); font-size:2rem;" />
+            </MudItem>
+            <MudItem xs="12" sm="3">
+                <div class="d-flex flex-column">
+                    <div style="font-size:0.72rem; color:var(--text-secondary); margin-bottom:4px;">한국 원화 (KRW)</div>
+                    <div style="font-size:1.5rem; font-weight:800; color:var(--gold-400);">
+                        ₩@ConvertedAmount.ToString("N0")
+                    </div>
+                </div>
+            </MudItem>
+            <MudItem xs="12" sm="2">
+                <MudText Typo="Typo.caption" Style="color:var(--text-secondary);">
+                    1 @_fromCurrency = ₩@GetRate(_fromCurrency).ToString("N2")
+                </MudText>
+            </MudItem>
+        </MudGrid>
+    </div>
+</div>
+
+@code {
+    private List<ExchangeRateSummary> _rates = new();
+    private bool _loading = true;
+    private DateTime? _lastUpdated;
+    private string _rateSearch = "";
+    private string _fromCurrency = "USD";
+    private decimal _convertAmount = 10;
+    private decimal _maxRate = 1;
+
+    private record CurrencyHighlight(string Code, string Flag, decimal Rate);
+    private List<CurrencyHighlight> _highlighted = new();
+
+    private IEnumerable<ExchangeRateSummary> FilteredRates =>
+        string.IsNullOrWhiteSpace(_rateSearch)
+            ? _rates
+            : _rates.Where(r => r.CurrencyCode.Contains(_rateSearch, StringComparison.OrdinalIgnoreCase)
+                              || r.CurrencyName.Contains(_rateSearch, StringComparison.OrdinalIgnoreCase));
+
+    private decimal ConvertedAmount => _convertAmount * GetRate(_fromCurrency);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { await LoadRates(); }
+        catch { _rates = GetFallbackRates(); BuildHighlighted(); _loading = false; }
+    }
+
+    private async Task LoadRates()
+    {
+        _loading = true;
+        StateHasChanged();
+        try
+        {
+            _rates = await ApiService.GetExchangeRatesAsync();
+            _lastUpdated = DateTime.Now;
+        }
+        catch
+        {
+            _rates = GetFallbackRates();
+            _lastUpdated = DateTime.Now;
+        }
+        _maxRate = _rates.Any() ? _rates.Max(r => r.RateToKRW) : 1;
+        BuildHighlighted();
+        _loading = false;
+    }
+
+    private async Task RefreshRates()
+    {
+        await LoadRates();
+        Snackbar.Add("환율 정보가 갱신되었습니다", Severity.Success);
+    }
+
+    private void BuildHighlighted()
+    {
+        var codes = new[] { "USD", "EUR", "JPY", "GBP", "CAD", "AUD" };
+        _highlighted = codes
+            .Select(c => new CurrencyHighlight(c, GetFlag(c), GetRate(c)))
+            .ToList();
+    }
+
+    private decimal GetRate(string code) =>
+        _rates.FirstOrDefault(x => x.CurrencyCode == code)?.RateToKRW ?? 0;
+
+    private string GetFlag(string code) => code switch
+    {
+        "USD" => "🇺🇸", "EUR" => "🇪🇺", "JPY" => "🇯🇵", "GBP" => "🇬🇧",
+        "CAD" => "🇨🇦", "AUD" => "🇦🇺", "CHF" => "🇨🇭", "CNY" => "🇨🇳",
+        "HKD" => "🇭🇰", "SGD" => "🇸🇬", "NZD" => "🇳🇿", "SEK" => "🇸🇪",
+        "NOK" => "🇳🇴", "DKK" => "🇩🇰", "MXN" => "🇲🇽", "BRL" => "🇧🇷",
+        _ => "🏳️"
+    };
+
+    private List<ExchangeRateSummary> GetFallbackRates() => new()
+    {
+        new() { CurrencyCode="USD", CurrencyName="미국 달러",        RateToKRW=1380,   UpdatedAt=DateTime.Now },
+        new() { CurrencyCode="EUR", CurrencyName="유럽연합 유로",    RateToKRW=1500,   UpdatedAt=DateTime.Now },
+        new() { CurrencyCode="JPY", CurrencyName="일본 엔",          RateToKRW=9.2m,   UpdatedAt=DateTime.Now },
+        new() { CurrencyCode="GBP", CurrencyName="영국 파운드",      RateToKRW=1750,   UpdatedAt=DateTime.Now },
+        new() { CurrencyCode="CAD", CurrencyName="캐나다 달러",      RateToKRW=1010,   UpdatedAt=DateTime.Now },
+        new() { CurrencyCode="AUD", CurrencyName="호주 달러",        RateToKRW=890,    UpdatedAt=DateTime.Now },
+        new() { CurrencyCode="CHF", CurrencyName="스위스 프랑",      RateToKRW=1560,   UpdatedAt=DateTime.Now },
+        new() { CurrencyCode="CNY", CurrencyName="중국 위안화",      RateToKRW=190,    UpdatedAt=DateTime.Now },
+        new() { CurrencyCode="HKD", CurrencyName="홍콩 달러",        RateToKRW=177,    UpdatedAt=DateTime.Now },
+        new() { CurrencyCode="SGD", CurrencyName="싱가포르 달러",    RateToKRW=1030,   UpdatedAt=DateTime.Now },
+    };
+}

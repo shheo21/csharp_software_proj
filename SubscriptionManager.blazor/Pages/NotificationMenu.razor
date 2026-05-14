@@ -1,0 +1,164 @@
+@using MudBlazor
+@inject ISubscriptionApiService ApiService
+
+<div style="margin-right: 18px; position: relative; display: inline-block;">
+    
+    <!-- 종 버튼과 뱃지 -->
+    <MudBadge Content="@_badgeCount" Color="Color.Error" Overlap="true" Visible="@(_badgeCount > 0)" Class="naver-badge">
+        <MudIconButton Icon="@Icons.Material.Filled.Notifications" 
+                       Color="Color.Inherit" 
+                       OnClick="ToggleMenu" />
+    </MudBadge>
+
+    <!-- 클릭 시 나타나는 팝업 창 -->
+    <MudPopover Open="@_isOpen" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Class="glass-popover-menu">
+        <div class="glass-card pa-4" style="width: 340px; border: none; border-radius: 12px;">
+            <!-- 상단: 알림 설정 스위치 -->
+            <div class="d-flex align-center justify-space-between mb-1">
+                <div class="d-flex align-center">
+                    <MudIcon Icon="@Icons.Material.Filled.NotificationsActive" Style="color: var(--gold-400);" Class="mr-2" Size="Size.Small" />
+                    <MudText Typo="Typo.subtitle2" Style="font-weight:700; color: var(--text-primary); font-family: Pretendard;">
+                        알림 설정
+                    </MudText>
+                </div>
+                <MudSwitch @bind-Value="_alarmEnabled" 
+                           Color="Color.Primary" 
+                           Class="custom-purple-toggle" 
+                           Style="margin: 0; margin-right: -10px;" />
+            </div>
+            
+            <MudDivider Style="background-color: rgba(255,255,255,0.08); margin: 12px 0;" />
+
+            <!-- 하단: D-7 알림 메세지 리스트 -->
+            <div style="max-height: 300px; overflow-y: auto;" class="custom-scrollbar">
+                @if (_loading)
+                {
+                    <div class="d-flex justify-center pa-6">
+                        <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
+                    </div>
+                }
+                else if (!_alarmEnabled)
+                {
+                    <div class="pa-6 text-center">
+                        <MudIcon Icon="@Icons.Material.Filled.NotificationsOff" Style="color: var(--text-secondary); opacity: 0.5; font-size: 2rem;" Class="mb-2" />
+                        <MudText Typo="Typo.body2" Style="color: var(--text-secondary);">알림이 꺼져있습니다.</MudText>
+                    </div>
+                }
+                else if (_upcoming.Count == 0)
+                {
+                    <div class="pa-6 text-center">
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircleOutline" Style="color: var(--accent-green); opacity: 0.7; font-size: 2rem;" Class="mb-2" />
+                        <MudText Typo="Typo.body2" Style="color: var(--text-secondary);">최근 7일 내 갱신될 구독이 없습니다.</MudText>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var sub in _upcoming)
+                    {
+                        <div class="notification-item py-2 px-1">
+                            <div class="d-flex align-center mb-1">
+                                <div class="sub-icon-small mr-2">@(sub.IconEmoji ?? "📦")</div>
+                                <div style="font-weight:600; color: var(--text-primary); font-size: 0.9rem;">
+                                    @sub.Name
+                                </div>
+                                <MudSpacer />
+                                <div class="dday-text" style="color: var(--accent-red); font-size: 0.75rem; font-weight: 700;">
+                                    D-@sub.DaysUntilBilling
+                                </div>
+                            </div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary); padding-left: 30px; word-break: keep-all; line-height: 1.4;">
+                                <span style="color: var(--gold-400); font-weight: 600;">@sub.Name</span> 프로그램 구독 갱신일까지 <br/>
+                                <span style="color: var(--text-primary); font-weight: 700;">@sub.DaysUntilBilling</span>일 남았습니다.
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </MudPopover>
+</div>
+
+<MudOverlay Visible="@_isOpen" OnClick="CloseMenu" Background="transparent" ZIndex="9998" />
+
+<style>
+    /* 💡 뱃지 스타일 복구 및 위치 재조정 */
+    .naver-badge .mud-badge {
+        font-weight: 800;
+        border: 2px solid #07070e; /* 배경색과 똑같은 테두리를 주어 분리감 형성 */
+        
+        /* 크기를 강제로 줄였던 속성들을 모두 삭제하여 원래 크기로 돌려놓았습니다. */
+        /* 종 아이콘의 실제 우측 상단 모서리에 예쁘게 겹치도록 좌표만 당겨왔습니다. */
+        top: 10px !important;
+        right: 12px !important;
+    }
+
+    /* 팝오버(창) 스타일 */
+    .glass-popover-menu {
+        background: rgba(15, 23, 42, 0.85) !important;
+        backdrop-filter: blur(20px) !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(255,255,255,0.08) !important;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important;
+        overflow: hidden;
+        z-index: 9999 !important; 
+        margin-top: 12px;
+    }
+
+    /* 보라색 스위치 토글 커스텀 */
+    .custom-purple-toggle .mud-switch-track { background-color: #4f46e5; opacity: 0.4 !important; height: 18px; border-radius: 10px; }
+    .custom-purple-toggle.mud-checked .mud-switch-thumb { background-color: #6366f1 !important; }
+    .custom-purple-toggle.mud-checked .mud-switch-track { background-color: #6366f1 !important; opacity: 0.5 !important; }
+
+    /* 알림 리스트 아이템 호버 효과 */
+    .notification-item { border-bottom: 1px solid rgba(255,255,255,0.04); border-radius: 6px; transition: background-color 0.2s ease; }
+    .notification-item:hover { background-color: rgba(255,255,255,0.06); }
+    .notification-item:last-child { border-bottom: none; }
+    .sub-icon-small { font-size: 1.1rem; }
+
+    /* 내부 스크롤바 커스텀 */
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+</style>
+
+@code {
+    private bool _isOpen = false;
+    private bool _alarmEnabled = true;
+    private bool _loading = true;
+    private List<SubscriptionDto> _upcoming = new();
+    
+    private int _badgeCount => _alarmEnabled ? _upcoming.Count : 0;
+
+    private void ToggleMenu() => _isOpen = !_isOpen;
+    private void CloseMenu() => _isOpen = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        try
+        {
+            var summary = await ApiService.GetDashboardAsync();
+            _upcoming = summary.UpcomingBilling
+                               .Where(u => u.DaysUntilBilling <= 7)
+                               .OrderBy(u => u.DaysUntilBilling)
+                               .ToList();
+        }
+        catch
+        {
+            _upcoming = new List<SubscriptionDto>
+            {
+                new() { Name="Spotify", DaysUntilBilling=3, IconEmoji="🎵" },
+                new() { Name="Netflix", DaysUntilBilling=5, IconEmoji="🎬" }
+            };
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

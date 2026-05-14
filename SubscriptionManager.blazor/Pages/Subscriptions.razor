@@ -1,0 +1,351 @@
+@page "/subscriptions"
+@inject ISubscriptionApiService ApiService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>구독 관리 — SubTrack</PageTitle>
+
+<div class="fade-in-up">
+    <!-- Header -->
+    <div class="d-flex align-center justify-space-between mb-5">
+        <div>
+            <div class="page-title">구독 관리</div>
+            <div class="page-subtitle">등록된 구독 서비스를 관리하세요</div>
+        </div>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="OpenAddDialog"
+                   Style="border-radius:12px; font-weight:700; padding:10px 20px;">
+            구독 추가
+        </MudButton>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="glass-card pa-4 mb-4 fade-in-up fade-in-up-1">
+        <MudGrid Spacing="2">
+            <MudItem xs="12" sm="5">
+                <MudTextField @bind-Value="_searchQuery"
+                              Placeholder="서비스명 또는 카테고리로 검색..."
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              AdornmentColor="Color.Primary"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Immediate="true"
+                              DebounceInterval="300"
+                              OnDebounceIntervalElapsed="ApplyFilter"
+                              Style="border-radius:12px;" />
+            </MudItem>
+            <MudItem xs="12" sm="3">
+                <MudSelect T="string" Value="_selectedCategory" ValueChanged="OnCategoryChanged"
+                           Label="카테고리"
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense"
+                           AnchorOrigin="Origin.BottomCenter"
+                           Dense="true">
+                    <MudSelectItem T="string" Value="@("")">전체</MudSelectItem>
+                    @foreach (var cat in _categories)
+                    {
+                        <MudSelectItem T="string" Value="@cat">@cat</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="2">
+                <MudSelect T="string" Value="_selectedCurrency" ValueChanged="OnCurrencyChanged"
+                           Label="통화"
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense"
+                           Dense="true">
+                    <MudSelectItem T="string" Value="@("")">전체</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("KRW")">₩ 원화</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("USD")">$ 달러</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("EUR")">€ 유로</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("JPY")">¥ 엔화</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="2">
+                <MudSelect T="string" Value="_selectedCycle" ValueChanged="OnCycleChanged"
+                           Label="결제 주기"
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense"
+                           Dense="true">
+                    <MudSelectItem T="string" Value="@("")">전체</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("MONTHLY")">월간</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("YEARLY")">연간</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="d-flex gap-3 mb-4 flex-wrap fade-in-up fade-in-up-2">
+        <MudChip T="string" Icon="@Icons.Material.Filled.FilterList"
+                 Style="background:rgba(77,158,245,0.12); color:#4d9ef5; border-radius:8px;">
+            @(_filtered.Count)개 서비스
+        </MudChip>
+        <MudChip T="string" Icon="@Icons.Material.Filled.Payments"
+                 Style="background:rgba(99,102,241,0.12); color:var(--gold-400); border-radius:8px;">
+            월 ₩@_filtered.Sum(f => f.MonthlyAmountInKRW).ToString("N0")
+        </MudChip>
+    </div>
+
+    <!-- Table -->
+    @if (_loading)
+    {
+        <div class="d-flex justify-center pa-12">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        </div>
+    }
+    else
+    {
+        <div class="glass-card fade-in-up fade-in-up-3" style="overflow:hidden;">
+            <MudTable Items="@_filtered" Hover="true" Dense="false"
+                      Style="background:transparent;"
+                      RowClass="sub-row"
+                      SortLabel="정렬"
+                      Elevation="0">
+                <HeaderContent>
+                    <MudTh><MudTableSortLabel SortBy="new Func<SubscriptionDto, object>(x => x.Name)">서비스</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<SubscriptionDto, object>(x => x.Category)">카테고리</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<SubscriptionDto, object>(x => x.Amount)">결제 금액</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<SubscriptionDto, object>(x => x.AmountInKRW)">원화 환산</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<SubscriptionDto, object>(x => x.BillingCycle)">주기</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<SubscriptionDto, object>(x => x.NextBillingDate)">다음 결제일</MudTableSortLabel></MudTh>
+                    <MudTh>D-Day</MudTh>
+                    <MudTh>상태</MudTh>
+                    <MudTh>관리</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>
+                        <div class="d-flex align-center gap-3">
+                            <div class="sub-icon">@(context.IconEmoji ?? "📦")</div>
+                            <div>
+                                <div style="font-weight:600; color: var(--text-primary);">@context.Name</div>
+                                @if (!string.IsNullOrWhiteSpace(context.Notes))
+                                {
+                                    <div style="font-size:0.72rem; color: var(--text-secondary); max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">@context.Notes</div>
+                                }
+                            </div>
+                        </div>
+                    </MudTd>
+                    <MudTd>
+                        <MudChip T="string" Size="Size.Small"
+                                 Style="@($"background:{GetCategoryColor(context.Category)}22; color:{GetCategoryColor(context.Category)}; border-radius:8px; font-size:0.72rem; height:24px;")">
+                            @context.Category
+                        </MudChip>
+                    </MudTd>
+                    <MudTd>
+                        <div style="font-weight:600; color: var(--text-primary);">
+                            @GetCurrencySymbol(context.Currency)@context.Amount.ToString("N2")
+                        </div>
+                        <div style="font-size:0.72rem; color: var(--text-secondary);">@context.Currency</div>
+                    </MudTd>
+                    <MudTd>
+                        <div style="font-weight:700; color: var(--gold-400);">
+                            ₩@context.AmountInKRW.ToString("N0")
+                        </div>
+                        @if (context.BillingCycle == "YEARLY")
+                        {
+                            <div style="font-size:0.72rem; color: var(--text-secondary);">
+                                월 환산 ₩@context.MonthlyAmountInKRW.ToString("N0")
+                            </div>
+                        }
+                    </MudTd>
+                    <MudTd>
+                        <MudChip T="string" Size="Size.Small"
+                                 Style="@($"background:{(context.BillingCycle == "YEARLY" ? "rgba(77,158,245,0.12)" : "rgba(46,213,115,0.12)")}; color:{(context.BillingCycle == "YEARLY" ? "#4d9ef5" : "#2ed573")}; border-radius:8px; font-size:0.72rem; height:24px;")">
+                            @context.BillingCycleLabel
+                        </MudChip>
+                    </MudTd>
+                    <MudTd>
+                        <div style="color: var(--text-primary); font-size:0.88rem;">
+                            @context.NextBillingDate.ToString("yyyy.MM.dd")
+                        </div>
+                    </MudTd>
+                    <MudTd>
+                        <div class="dday-badge" style="background: @(context.DaysBadgeColor)22; color: @context.DaysBadgeColor; border: 1px solid @(context.DaysBadgeColor)44; min-width:52px; justify-content:center;">
+                            @context.DaysLabel
+                        </div>
+                    </MudTd>
+                    <MudTd>
+                        <MudSwitch T="bool" Value="context.IsActive"
+                                   Color="Color.Primary" Size="Size.Small"
+                                   ValueChanged="@((v) => ToggleActive(context, v))" />
+                    </MudTd>
+                    <MudTd>
+                        <div class="d-flex gap-1">
+                            <MudIconButton Icon="@Icons.Material.Outlined.Edit"
+                                           Size="Size.Small"
+                                           Style="color: var(--gold-400);"
+                                           OnClick="@(() => OpenEditDialog(context))" />
+                            <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline"
+                                           Size="Size.Small"
+                                           Style="color: var(--accent-red);"
+                                           OnClick="@(() => ConfirmDelete(context))" />
+                        </div>
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <div class="d-flex flex-column align-center pa-12" style="color: var(--text-secondary);">
+                        <MudIcon Icon="@Icons.Material.Outlined.SearchOff" Size="Size.Large" Class="mb-3" Style="opacity:0.4;" />
+                        <MudText>검색 결과가 없습니다</MudText>
+                        <MudText Typo="Typo.caption">다른 검색어나 필터를 사용해보세요</MudText>
+                    </div>
+                </NoRecordsContent>
+            </MudTable>
+        </div>
+    }
+</div>
+
+@code {
+    private List<SubscriptionDto> _all = new();
+    private List<SubscriptionDto> _filtered = new();
+    private List<string> _categories = new();
+    private bool _loading = true;
+
+    private string _searchQuery = "";
+    private string _selectedCategory = "";
+    private string _selectedCurrency = "";
+    private string _selectedCycle = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _categories = await GetCategoriesSafe();
+            await LoadData();
+        }
+        catch
+        {
+            _all = GetMockSubscriptions();
+            ApplyFilter();
+            _loading = false;
+        }
+    }
+
+    private async Task<List<string>> GetCategoriesSafe()
+    {
+        try { return await ApiService.GetCategoriesAsync(); }
+        catch { return new List<string> { "엔터테인먼트", "음악", "창작 도구", "개발 도구", "클라우드 스토리지", "생산성", "뉴스/미디어", "게임", "교육", "건강/피트니스", "기타" }; }
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        StateHasChanged();
+        try
+        {
+            _all = await ApiService.GetSubscriptionsAsync();
+            ApplyFilter();
+        }
+        catch
+        {
+            _all = GetMockSubscriptions();
+            ApplyFilter();
+        }
+        _loading = false;
+    }
+
+    private void ApplyFilter()
+    {
+        _filtered = _all.Where(s =>
+        {
+            var matchSearch = string.IsNullOrWhiteSpace(_searchQuery) ||
+                              s.Name.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                              s.Category.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase);
+            var matchCategory = string.IsNullOrWhiteSpace(_selectedCategory) || s.Category == _selectedCategory;
+            var matchCurrency = string.IsNullOrWhiteSpace(_selectedCurrency) || s.Currency == _selectedCurrency;
+            var matchCycle = string.IsNullOrWhiteSpace(_selectedCycle) || s.BillingCycle == _selectedCycle;
+            return matchSearch && matchCategory && matchCurrency && matchCycle;
+        }).ToList();
+    }
+
+    private Task OnCategoryChanged(string v) { _selectedCategory = v; ApplyFilter(); return Task.CompletedTask; }
+    private Task OnCurrencyChanged(string v) { _selectedCurrency = v; ApplyFilter(); return Task.CompletedTask; }
+    private Task OnCycleChanged(string v) { _selectedCycle = v; ApplyFilter(); return Task.CompletedTask; }
+
+    private async Task OpenAddDialog()
+    {
+        var dialog = await DialogService.ShowAsync<AddEditSubscriptionDialog>("새 구독 추가");
+        var result = await dialog.Result;
+        if (result is { Canceled: false }) await LoadData();
+    }
+
+    private async Task OpenEditDialog(SubscriptionDto sub)
+    {
+        var parameters = new DialogParameters<AddEditSubscriptionDialog> { { x => x.Subscription, sub } };
+        var dialog = await DialogService.ShowAsync<AddEditSubscriptionDialog>("구독 수정", parameters);
+        var result = await dialog.Result;
+        if (result is { Canceled: false }) await LoadData();
+    }
+
+    private async Task ToggleActive(SubscriptionDto sub, bool val)
+    {
+        try
+        {
+            var req = new UpdateSubscriptionRequest
+            {
+                Name = sub.Name, Category = sub.Category, Amount = sub.Amount,
+                Currency = sub.Currency, BillingCycle = sub.BillingCycle,
+                NextBillingDate = sub.NextBillingDate, IconEmoji = sub.IconEmoji,
+                Notes = sub.Notes, IsActive = val
+            };
+            await ApiService.UpdateAsync(sub.Id, req);
+            sub.IsActive = val;
+            Snackbar.Add(val ? $"{sub.Name} 활성화됨" : $"{sub.Name} 비활성화됨", Severity.Success);
+        }
+        catch { Snackbar.Add("상태 변경에 실패했습니다", Severity.Error); }
+    }
+
+    private async Task ConfirmDelete(SubscriptionDto sub)
+    {
+        var parameters = new DialogParameters<MudMessageBox>
+        {
+            { x => x.Message, $"'{sub.Name}' 을(를) 목록에서 삭제합니다. 이 작업은 되돌릴 수 없습니다." },
+            { x => x.YesText, "삭제" },
+            { x => x.CancelText, "취소" }
+        };
+        var dialog = await DialogService.ShowAsync<MudMessageBox>("구독 삭제", parameters);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            try
+            {
+                await ApiService.DeleteAsync(sub.Id);
+                Snackbar.Add($"{sub.Name} 삭제됨", Severity.Success);
+                await LoadData();
+            }
+            catch { Snackbar.Add("삭제에 실패했습니다", Severity.Error); }
+        }
+    }
+
+    private string GetCurrencySymbol(string code) => code switch
+    {
+        "USD" => "$", "EUR" => "€", "JPY" => "¥", "GBP" => "£",
+        "KRW" => "₩", _ => code + " "
+    };
+
+    private string GetCategoryColor(string cat) => cat switch
+    {
+        "엔터테인먼트" => "#ff4757",
+        "음악" => "#a29bfe",
+        "창작 도구" => "#fd79a8",
+        "개발 도구" => "#4d9ef5",
+        "클라우드 스토리지" => "#00cec9",
+        "생산성" => "#2ed573",
+        "뉴스/미디어" => "#ffa502",
+        "게임" => "#e17055",
+        "교육" => "#74b9ff",
+        "건강/피트니스" => "#55efc4",
+        _ => "#818cf8"
+    };
+
+    private List<SubscriptionDto> GetMockSubscriptions() => new()
+    {
+        new() { Id=1, Name="Netflix", Category="엔터테인먼트", Currency="KRW", Amount=17000, AmountInKRW=17000, MonthlyAmountInKRW=17000, BillingCycle="MONTHLY", NextBillingDate=DateTime.Now.AddDays(5), DaysUntilBilling=5, IconEmoji="🎬", IsActive=true },
+        new() { Id=2, Name="Adobe Creative Cloud", Category="창작 도구", Currency="USD", Amount=54.99m, AmountInKRW=75886, MonthlyAmountInKRW=75886, BillingCycle="MONTHLY", NextBillingDate=DateTime.Now.AddDays(12), DaysUntilBilling=12, IconEmoji="🎨", IsActive=true },
+        new() { Id=3, Name="CLIP STUDIO PAINT", Category="창작 도구", Currency="KRW", Amount=4800, AmountInKRW=4800, MonthlyAmountInKRW=400, BillingCycle="YEARLY", NextBillingDate=DateTime.Now.AddDays(45), DaysUntilBilling=45, IconEmoji="✏️", IsActive=true },
+        new() { Id=4, Name="Spotify", Category="음악", Currency="USD", Amount=10.99m, AmountInKRW=15166, MonthlyAmountInKRW=15166, BillingCycle="MONTHLY", NextBillingDate=DateTime.Now.AddDays(3), DaysUntilBilling=3, IconEmoji="🎵", IsActive=true },
+        new() { Id=5, Name="GitHub Copilot", Category="개발 도구", Currency="USD", Amount=10m, AmountInKRW=13800, MonthlyAmountInKRW=13800, BillingCycle="MONTHLY", NextBillingDate=DateTime.Now.AddDays(20), DaysUntilBilling=20, IconEmoji="💻", IsActive=true },
+    };
+}
