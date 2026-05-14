@@ -1,0 +1,69 @@
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudContainer Class="pa-2">
+            <!-- 서비스 이름 입력 -->
+            <MudTextField @bind-Value="ServiceName" Label="서비스 이름*" Placeholder="Netflix, Adobe CC ..." Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-4" />
+
+            <!-- 카테고리 선택 -->
+            <MudSelect T="string" Label="카테고리" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter" Margin="Margin.Dense" Class="mb-4">
+                <MudSelectItem Value="@("엔터테인먼트")" />
+                <MudSelectItem Value="@("AI")" />
+                <MudSelectItem Value="@("기타")" />
+            </MudSelect>
+
+            <!-- 금액과 통화 -->
+            <MudGrid Spacing="2" Class="mb-4">
+                <MudItem xs="8">
+                    <MudNumericField @bind-Value="Amount" Label="결제 금액*" Format="N2" Variant="Variant.Outlined" Margin="Margin.Dense" HideSpinButtons="false" />
+                </MudItem>
+                <MudItem xs="4">
+                    <MudSelect T="string" @bind-Value="Currency" Label="통화" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter" Margin="Margin.Dense">
+                        <MudSelectItem Value="@("KRW")">원 (KRW)</MudSelectItem>
+                        <MudSelectItem Value="@("USD")">달러 (USD)</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+
+            <!-- 결제 주기 -->
+            <MudText Typo="Typo.caption" Color="Color.Secondary">결제 주기</MudText>
+            <MudRadioGroup T="string" @bind-Value="BillingCycle" Class="mb-4">
+                <MudRadio Value="@("Monthly")" Color="Color.Primary">매월</MudRadio>
+                <MudRadio Value="@("Yearly")" Color="Color.Primary">매년</MudRadio>
+            </MudRadioGroup>
+
+            <!-- 다음 결제일 -->
+            <MudDatePicker Label="다음 결제일" @bind-Date="NextBillingDate" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-4" />
+
+            <!-- 메모 -->
+            <MudTextField @bind-Value="Memo" Label="메모 (선택)" Placeholder="플랜 정보, 공유 계정 등..." Variant="Variant.Outlined" Margin="Margin.Dense" Lines="3" />
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Color="Color.Default">취소</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Class="px-6">추가</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    private string ServiceName { get; set; } = "";
+    private decimal Amount { get; set; } = 0.00m;
+    private string Currency { get; set; } = "KRW";
+    private string BillingCycle { get; set; } = "Monthly";
+    private DateTime? NextBillingDate { get; set; } = DateTime.Today;
+    private string Memo { get; set; } = "";
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private void Submit()
+    {
+        // TODO: 입력된 데이터 처리
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+}

@@ -1,0 +1,286 @@
+@inject ISubscriptionApiService ApiService
+@inject ISnackbar Snackbar
+
+<MudDialog Options='new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true, BackdropClick = false }'>
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <span style="font-size:1.4rem;">@(_form.IconEmoji ?? "📦")</span>
+            <MudText Typo="Typo.h6" Style="font-weight:700; color:var(--text-primary);">
+                @(_isEdit ? "구독 수정" : "새 구독 추가")
+            </MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_mudForm" Model="_form">
+            <MudGrid Spacing="3">
+                <!-- Icon + Name Row -->
+                <MudItem xs="3">
+                    <div class="d-flex flex-column align-center">
+                        <div class="sub-icon mb-2" style="width:60px; height:60px; font-size:2rem; cursor:pointer;"
+                             @onclick="CycleEmoji">
+                            @(_form.IconEmoji ?? "📦")
+                        </div>
+                        <MudText Typo="Typo.caption" Style="color:var(--text-secondary); text-align:center;">
+                            탭하여 변경
+                        </MudText>
+                    </div>
+                </MudItem>
+                <MudItem xs="9">
+                    <MudTextField @bind-Value="_form.Name"
+                                  Label="서비스 이름"
+                                  Variant="Variant.Outlined"
+                                  Required="true"
+                                  RequiredError="서비스 이름을 입력하세요"
+                                  Margin="Margin.Dense"
+                                  Placeholder="Netflix, Adobe CC ..." />
+                </MudItem>
+
+                <!-- Category -->
+                <MudItem xs="12">
+                    <MudSelect T="string" @bind-Value="_form.Category"
+                               Label="카테고리"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               AnchorOrigin="Origin.BottomCenter">
+                        @foreach (var cat in _categories)
+                        {
+                            <MudSelectItem T="string" Value="@cat">@cat</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                <!-- Amount + Currency -->
+                <MudItem xs="7">
+                    <MudNumericField @bind-Value="_form.Amount"
+                                     Label="결제 금액"
+                                     Variant="Variant.Outlined"
+                                     Margin="Margin.Dense"
+                                     Required="true"
+                                     Min="0"
+                                     Format="N2" />
+                </MudItem>
+                <MudItem xs="5">
+                    <MudSelect T="string" Value="_form.Currency" ValueChanged="OnCurrencyChanged"
+                               Label="통화"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               AnchorOrigin="Origin.BottomCenter">
+                        <MudSelectItem T="string" Value="@("KRW")">🇰🇷 KRW 원</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("USD")">🇺🇸 USD 달러</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("EUR")">🇪🇺 EUR 유로</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("JPY")">🇯🇵 JPY 엔</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("GBP")">🇬🇧 GBP 파운드</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("CAD")">🇨🇦 CAD 캐나다달러</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("AUD")">🇦🇺 AUD 호주달러</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                <!-- Exchange rate preview -->
+                @if (_form.Currency != "KRW" && _currentRate > 0)
+                {
+                    <MudItem xs="12">
+                        <div style="background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.2); border-radius:10px; padding:10px 14px;">
+                            <div class="d-flex align-center gap-2">
+                                <MudIcon Icon="@Icons.Material.Filled.CurrencyExchange"
+                                         Style="color:var(--gold-400); font-size:1rem;" />
+                                <MudText Typo="Typo.caption" Style="color:var(--text-secondary);">
+                                    현재 환율 적용 시
+                                </MudText>
+                                <MudSpacer />
+                                <MudText Typo="Typo.body2" Style="font-weight:700; color:var(--gold-400);">
+                                    ≈ ₩@((_form.Amount * _currentRate).ToString("N0"))
+                                </MudText>
+                            </div>
+                        </div>
+                    </MudItem>
+                }
+
+                <!-- Billing Cycle -->
+                <MudItem xs="12">
+                    <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-subtle); border-radius:12px; padding:12px;">
+                        <MudText Typo="Typo.caption" Style="color:var(--text-secondary); margin-bottom:8px; display:block;">결제 주기</MudText>
+                        <MudToggleGroup T="string" @bind-Value="_form.BillingCycle"
+                                        SelectionMode="SelectionMode.SingleSelection"
+                                        Color="Color.Primary">
+                            <MudToggleItem T="string" Value="@("MONTHLY")">
+                                <div class="d-flex align-center gap-1 px-2">
+                                    <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Small" />
+                                    매월
+                                </div>
+                            </MudToggleItem>
+                            <MudToggleItem T="string" Value="@("YEARLY")">
+                                <div class="d-flex align-center gap-1 px-2">
+                                    <MudIcon Icon="@Icons.Material.Filled.CalendarViewMonth" Size="Size.Small" />
+                                    매년
+                                </div>
+                            </MudToggleItem>
+                        </MudToggleGroup>
+                    </div>
+                </MudItem>
+
+                <!-- Next Billing Date -->
+                <MudItem xs="12">
+                    <MudDatePicker @bind-Date="_nextBillingDate"
+                                   Label="다음 결제일"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense"
+                                   DateFormat="yyyy.MM.dd"
+                                   MinDate="DateTime.Today"
+                                   PickerVariant="PickerVariant.Dialog"
+                                   AutoClose="true" />
+                </MudItem>
+
+                <!-- Notes -->
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_form.Notes"
+                                  Label="메모 (선택)"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Lines="2"
+                                  Placeholder="플랜 정보, 공유 계정 등..." />
+                </MudItem>
+
+                <!-- Active toggle (edit only) -->
+                @if (_isEdit)
+                {
+                    <MudItem xs="12">
+                        <div class="d-flex align-center">
+                            <MudSwitch T="bool" @bind-Value="_isActive" Color="Color.Primary" />
+                            <MudText Style="color:var(--text-primary);">구독 활성화</MudText>
+                        </div>
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Variant="Variant.Text"
+                   Style="color:var(--text-secondary); border-radius:10px;">
+            취소
+        </MudButton>
+        <MudButton OnClick="Submit" Variant="Variant.Filled" Color="Color.Primary"
+                   Disabled="_saving"
+                   Style="border-radius:10px; font-weight:700; min-width:100px;">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            @(_isEdit ? "저장" : "추가")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public SubscriptionDto? Subscription { get; set; }
+
+    private bool _isEdit = false;
+    private bool _saving = false;
+    private int _editId = 0;
+    private bool _isActive = true;
+
+    private MudForm? _mudForm;
+    private CreateSubscriptionRequest _form = new();
+    private DateTime? _nextBillingDate = DateTime.Now.AddMonths(1);
+    private decimal _currentRate = 0;
+
+    private List<string> _categories = new()
+    {
+        "엔터테인먼트", "음악", "창작 도구", "개발 도구",
+        "클라우드 스토리지", "생산성", "뉴스/미디어",
+        "게임", "교육", "건강/피트니스", "기타"
+    };
+
+    private readonly string[] _emojiPool = new[]
+    {
+        "🎬", "🎵", "🎨", "💻", "📦", "☁️", "📚", "🎮",
+        "🏋️", "📰", "✏️", "🎙️", "🛠️", "🔐", "🌐", "⚡"
+    };
+    private int _emojiIndex = 0;
+
+    protected override void OnInitialized()
+    {
+        if (Subscription != null)
+        {
+            _isEdit = true;
+            _editId = Subscription.Id;
+            _form = new CreateSubscriptionRequest
+            {
+                Name = Subscription.Name,
+                Category = Subscription.Category,
+                Amount = Subscription.Amount,
+                Currency = Subscription.Currency,
+                BillingCycle = Subscription.BillingCycle,
+                NextBillingDate = Subscription.NextBillingDate,
+                IconEmoji = Subscription.IconEmoji,
+                Notes = Subscription.Notes
+            };
+            _nextBillingDate = Subscription.NextBillingDate;
+            _isActive = Subscription.IsActive;
+        }
+        else
+        {
+            _isEdit = false;
+            _editId = 0;
+            _form = new CreateSubscriptionRequest { BillingCycle = "MONTHLY", Currency = "KRW" };
+            _nextBillingDate = DateTime.Now.AddMonths(1);
+            _isActive = true;
+        }
+    }
+
+    private void Close() => MudDialog.Cancel();
+
+    private void CycleEmoji()
+    {
+        _emojiIndex = (_emojiIndex + 1) % _emojiPool.Length;
+        _form.IconEmoji = _emojiPool[_emojiIndex];
+    }
+
+    private async Task OnCurrencyChanged(string val)
+    {
+        _form.Currency = val;
+        try
+        {
+            var rates = await ApiService.GetExchangeRatesAsync();
+            var r = rates.FirstOrDefault(x => x.CurrencyCode == val);
+            _currentRate = r?.RateToKRW ?? 0;
+        }
+        catch { _currentRate = 0; }
+        StateHasChanged();
+    }
+
+    private async Task Submit()
+    {
+        if (_mudForm != null) await _mudForm.ValidateAsync();
+        if (string.IsNullOrWhiteSpace(_form.Name)) return;
+
+        _form.NextBillingDate = _nextBillingDate ?? DateTime.Now.AddMonths(1);
+        _saving = true;
+
+        try
+        {
+            if (_isEdit)
+            {
+                var req = new UpdateSubscriptionRequest
+                {
+                    Name = _form.Name, Category = _form.Category, Amount = _form.Amount,
+                    Currency = _form.Currency, BillingCycle = _form.BillingCycle,
+                    NextBillingDate = _form.NextBillingDate, IconEmoji = _form.IconEmoji,
+                    Notes = _form.Notes, IsActive = _isActive
+                };
+                await ApiService.UpdateAsync(_editId, req);
+                Snackbar.Add($"'{_form.Name}' 수정 완료", Severity.Success);
+            }
+            else
+            {
+                await ApiService.CreateAsync(_form);
+                Snackbar.Add($"'{_form.Name}' 추가 완료", Severity.Success);
+            }
+
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch { Snackbar.Add("저장에 실패했습니다. 다시 시도해주세요.", Severity.Error); }
+
+        _saving = false;
+    }
+}

@@ -1,17 +1,96 @@
-﻿@inherits LayoutComponentBase
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+@inherits LayoutComponentBase
+@using SubscriptionManager.blazor.Pages
 
-    <main>
-        <div class="top-row px-4 auth">
-            <LoginDisplay />
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+
+<MudThemeProvider Theme="_darkTheme" IsDarkMode="true" />
+<MudPopoverProvider />
+<MudDialogProvider FullWidth="true" MaxWidth="MaxWidth.Small" />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="0" Class="app-bar-custom" Fixed="true">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit"
+                       Edge="Edge.Start" OnClick="ToggleDrawer" />
+        <MudSpacer />
+        <MudText Typo="Typo.h6" Class="app-title">
+            <span class="gold-text">✦</span> SubTrack
+        </MudText>
+        <MudSpacer />
+        <!-- 기존 MudIconButton을 지우고 방금 만든 NotificationMenu를 넣습니다 -->
+        <NotificationMenu />
+        <MudAvatar Color="Color.Primary" Size="Size.Small" Style="cursor:pointer; margin-right:8px;">U</MudAvatar>
+    </MudAppBar>
+
+    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always"
+               Elevation="0" Variant="DrawerVariant.Persistent"
+               Class="drawer-custom" Width="240px">
+        <div class="d-flex flex-column" style="height:100%;">
+            <MudNavMenu Class="mt-4 px-2" Style="flex:1;">
+                <MudNavLink Href="/" Match="NavLinkMatch.All"
+                            Icon="@Icons.Material.Filled.Dashboard"
+                            Class="nav-item-custom">
+                    대시보드
+                </MudNavLink>
+                <MudNavLink Href="/subscriptions"
+                            Icon="@Icons.Material.Filled.Subscriptions"
+                            Class="nav-item-custom">
+                    구독 관리
+                </MudNavLink>
+                <MudNavLink Href="/spending-analysis"
+                            Icon="@Icons.Material.Filled.Analytics"
+                            Class="nav-item-custom">
+                    지출 분석
+                </MudNavLink>
+                <MudNavLink Href="/exchange-rates"
+                            Icon="@Icons.Material.Filled.CurrencyExchange"
+                            Class="nav-item-custom">
+                    환율 정보
+                </MudNavLink>
+            </MudNavMenu>
+            <MudText Typo="Typo.caption" Class="gold-text pa-4">
+                SubTrack v1.0
+            </MudText>
         </div>
+    </MudDrawer>
 
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
-</div>
+    <MudMainContent Class="main-content-custom">
+        @Body
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool _drawerOpen = true;
+
+    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+
+    private MudTheme _darkTheme = new MudTheme
+    {
+        PaletteDark = new PaletteDark
+        {
+            Primary = "#6366f1",
+            PrimaryContrastText = "#ffffff",
+            Secondary = "#7c5cfc",
+            Tertiary = "#22d3ee",
+            Background = "#07070e",
+            BackgroundGray = "#0c0c18",
+            Surface = "#0f0f1b",
+            AppbarBackground = "rgba(7,7,14,0.92)",
+            DrawerBackground = "rgba(12,12,24,0.95)",
+            DrawerText = "#eef1f8",
+            TextPrimary = "#eef1f8",
+            TextSecondary = "#7b879e",
+            ActionDefault = "#eef1f8",
+            TableHover = "rgba(99,102,241,0.06)",
+            Divider = "rgba(255,255,255,0.06)",
+            Success = "#34d399",
+            Error = "#f87171",
+            Warning = "#fb923c",
+            Info = "#22d3ee",
+        },
+        LayoutProperties = new LayoutProperties
+        {
+            DrawerWidthLeft = "240px",
+            DrawerMiniWidthLeft = "72px",
+        }
+    };
+}
