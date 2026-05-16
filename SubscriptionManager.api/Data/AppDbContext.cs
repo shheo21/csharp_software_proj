@@ -66,7 +66,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
         });
 
         // Notification 엔티티 설정
-        modelBuilder.Entity<Notification>(entity =>
+        builder.Entity<Notification>(entity =>
         {
             entity.HasKey(e => e.Id);
 
