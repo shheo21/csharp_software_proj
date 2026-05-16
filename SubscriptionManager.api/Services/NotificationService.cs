@@ -1,16 +1,16 @@
 using Microsoft.EntityFrameworkCore;
-using SubscriptionManager.Api.Data;
-using SubscriptionManager.Api.Models;
+using SubscriptionManager.api.Data;
+using SubscriptionManager.api.Models;
 
-namespace SubscriptionManager.Api.Services;
+namespace SubscriptionManager.api.Services;
 
 public interface INotificationService
 {
-    Task GenerateRenewalDueNotificationsAsync(int userId);
-    Task<List<NotificationDto>> GetNotificationsAsync(int userId, bool unreadOnly = false);
-    Task<int> GetUnreadCountAsync(int userId);
-    Task MarkAsReadAsync(int userId, int notificationId);
-    Task MarkAllAsReadAsync(int userId);
+    Task GenerateRenewalDueNotificationsAsync(string userId);
+    Task<List<NotificationDto>> GetNotificationsAsync(string userId, bool unreadOnly = false);
+    Task<int> GetUnreadCountAsync(string userId);
+    Task MarkAsReadAsync(string userId, int notificationId);
+    Task MarkAllAsReadAsync(string userId);
 }
 
 public class NotificationService : INotificationService
@@ -24,7 +24,7 @@ public class NotificationService : INotificationService
         _db = db;
     }
 
-    public async Task GenerateRenewalDueNotificationsAsync(int userId)
+    public async Task GenerateRenewalDueNotificationsAsync(string userId)
     {
         var today = DateTime.UtcNow.Date;
         var until = today.AddDays(RenewalDueThresholdDays);
@@ -72,7 +72,7 @@ public class NotificationService : INotificationService
     }
 
     public async Task<List<NotificationDto>> GetNotificationsAsync(
-        int userId,
+        string userId,
         bool unreadOnly = false)
     {
         await GenerateRenewalDueNotificationsAsync(userId);
@@ -102,7 +102,7 @@ public class NotificationService : INotificationService
         return notifications.Select(ToDto).ToList();
     }
 
-    public async Task<int> GetUnreadCountAsync(int userId)
+    public async Task<int> GetUnreadCountAsync(string userId)
     {
         await GenerateRenewalDueNotificationsAsync(userId);
 
@@ -118,7 +118,7 @@ public class NotificationService : INotificationService
                 n.RenewalDate <= until);
     }
 
-    public async Task MarkAsReadAsync(int userId, int notificationId)
+    public async Task MarkAsReadAsync(string userId, int notificationId)
     {
         var notification = await _db.Notifications
             .FirstOrDefaultAsync(n => n.Id == notificationId && n.UserId == userId);
@@ -133,7 +133,7 @@ public class NotificationService : INotificationService
         await _db.SaveChangesAsync();
     }
 
-    public async Task MarkAllAsReadAsync(int userId)
+    public async Task MarkAllAsReadAsync(string userId)
     {
         var today = DateTime.UtcNow.Date;
         var until = today.AddDays(RenewalDueThresholdDays);
