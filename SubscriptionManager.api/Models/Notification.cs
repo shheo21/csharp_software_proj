@@ -1,4 +1,4 @@
-namespace SubscriptionManager.Api.Models;
+namespace SubscriptionManager.api.Models;
 
 public class Notification
 {
