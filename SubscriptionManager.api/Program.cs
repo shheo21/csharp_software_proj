@@ -84,6 +84,77 @@ using (var scope = app.Services.CreateScope())
         };
         await userManager.CreateAsync(mockUser, "Test1234!");
     }
+
+    // 환율 시드
+    if (!db.ExchangeRates.Any())
+    {
+        db.ExchangeRates.AddRange(
+            new ExchangeRate { CurrencyCode = "USD", CurrencyName = "미국 달러", RateToKRW = 1380m, UpdatedAt = DateTime.UtcNow },
+            new ExchangeRate { CurrencyCode = "EUR", CurrencyName = "유로", RateToKRW = 1520m, UpdatedAt = DateTime.UtcNow },
+            new ExchangeRate { CurrencyCode = "JPY", CurrencyName = "일본 엔", RateToKRW = 9.2m, UpdatedAt = DateTime.UtcNow },
+            new ExchangeRate { CurrencyCode = "GBP", CurrencyName = "영국 파운드", RateToKRW = 1750m, UpdatedAt = DateTime.UtcNow }
+        );
+        await db.SaveChangesAsync();
+    }
+
+    // Mock 구독 시드
+    var seedUser = await userManager.FindByEmailAsync(mockEmail);
+    if (seedUser != null && !db.Subscriptions.Any(s => s.UserId == seedUser.Id))
+    {
+        var today = DateTime.UtcNow.Date;
+        db.Subscriptions.AddRange(
+            new Subscription
+            {
+                UserId = seedUser.Id,
+                Name = "Netflix",
+                Category = "엔터테인먼트",
+                Amount = 17000m,
+                Currency = "KRW",
+                BillingCycle = "MONTHLY",
+                NextBillingDate = today.AddDays(12),
+                IconEmoji = "🎬",
+                Notes = "가족 요금제",
+                IsActive = true,
+            },
+            new Subscription
+            {
+                UserId = seedUser.Id,
+                Name = "Spotify",
+                Category = "음악",
+                Amount = 10.99m,
+                Currency = "USD",
+                BillingCycle = "MONTHLY",
+                NextBillingDate = today.AddDays(5),
+                IconEmoji = "🎵",
+                IsActive = true,
+            },
+            new Subscription
+            {
+                UserId = seedUser.Id,
+                Name = "iCloud",
+                Category = "클라우드 스토리지",
+                Amount = 1.29m,
+                Currency = "USD",
+                BillingCycle = "MONTHLY",
+                NextBillingDate = today.AddDays(20),
+                IconEmoji = "☁️",
+                IsActive = true,
+            },
+            new Subscription
+            {
+                UserId = seedUser.Id,
+                Name = "Adobe Creative Cloud",
+                Category = "생산성",
+                Amount = 54.99m,
+                Currency = "USD",
+                BillingCycle = "MONTHLY",
+                NextBillingDate = today.AddDays(3),
+                IconEmoji = "🎨",
+                IsActive = true,
+            }
+        );
+        await db.SaveChangesAsync();
+    }
 }
 
 if (app.Environment.IsDevelopment())
