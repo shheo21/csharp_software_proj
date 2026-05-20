@@ -70,6 +70,11 @@ public class CreateSubscriptionRequest
     public string? Notes { get; set; }
 }
 
+public class UpdateSubscriptionRequest : CreateSubscriptionRequest
+{
+    public bool IsActive { get; set; } = true;
+}
+
 public class SubscriptionQueryParams
 {
     public string? Search { get; set; }
