@@ -126,6 +126,24 @@ public class SubscriptionsController : ControllerBase
         return Ok(ToDto(subscription, exchangeRates));
     }
 
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteSubscription(int id)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null) return Unauthorized();
+
+        var subscription = await _db.Subscriptions
+            .FirstOrDefaultAsync(s => s.Id == id && s.UserId == userId);
+
+        if (subscription == null)
+            return NotFound(new { message = "구독을 찾을 수 없습니다." });
+
+        _db.Subscriptions.Remove(subscription);
+        await _db.SaveChangesAsync();
+
+        return NoContent();
+    }
+
     private static SubscriptionDto ToDto(Subscription s, Dictionary<string, decimal> exchangeRates)
     {
         var today = DateTime.UtcNow.Date;
