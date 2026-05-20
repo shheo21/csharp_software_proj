@@ -1,0 +1,153 @@
+@using MudBlazor
+@using Microsoft.AspNetCore.Components.Authorization
+@using SubscriptionManager.blazor.Services
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+
+<div style="margin-right: 8px; position: relative; display: inline-block;">
+
+    <MudAvatar Color="Color.Primary"
+               Size="Size.Small"
+               Style="cursor:pointer;"
+               @onclick="ToggleMenu">
+        @_initial
+    </MudAvatar>
+
+    <MudPopover Open="@_isOpen"
+                AnchorOrigin="Origin.BottomRight"
+                TransformOrigin="Origin.TopRight"
+                Class="glass-user-menu">
+        <div class="glass-card pa-3" style="width: 260px; border: none; border-radius: 12px;">
+
+            <!-- 사용자 정보 헤더 -->
+            <div class="d-flex align-center pa-2 mb-1">
+                <MudAvatar Color="Color.Primary" Size="Size.Medium" Class="mr-3">@_initial</MudAvatar>
+                <div style="min-width:0;">
+                    <MudText Typo="Typo.subtitle2"
+                             Style="font-weight:700; color: var(--text-primary); font-family: Pretendard; line-height:1.2;">
+                        @(_displayName ?? "사용자")
+                    </MudText>
+                    <MudText Typo="Typo.caption"
+                             Style="color: var(--text-secondary); font-family: Pretendard;
+                                    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block;">
+                        @(_email ?? "로그인이 필요합니다")
+                    </MudText>
+                </div>
+            </div>
+
+            <MudDivider Style="background-color: rgba(255,255,255,0.08); margin: 6px 0;" />
+
+            <!-- 메뉴 항목 -->
+            <div class="user-menu-item d-flex align-center pa-2"
+                 @onclick="GoToSettings">
+                <MudIcon Icon="@Icons.Material.Filled.Settings"
+                         Style="color: var(--text-secondary);"
+                         Class="mr-3" Size="Size.Small" />
+                <MudText Typo="Typo.body2" Style="color: var(--text-primary);">설정</MudText>
+            </div>
+
+            <MudDivider Style="background-color: rgba(255,255,255,0.08); margin: 6px 0;" />
+
+            <div class="user-menu-item user-menu-item-danger d-flex align-center pa-2"
+                 @onclick="HandleLogout">
+                <MudIcon Icon="@Icons.Material.Filled.Logout"
+                         Style="color: var(--accent-red, #f87171);"
+                         Class="mr-3" Size="Size.Small" />
+                <MudText Typo="Typo.body2" Style="color: var(--accent-red, #f87171); font-weight: 600;">
+                    로그아웃
+                </MudText>
+            </div>
+        </div>
+    </MudPopover>
+</div>
+
+<MudOverlay Visible="@_isOpen" OnClick="CloseMenu" Background="transparent" ZIndex="9998" />
+
+<style>
+    .glass-user-menu {
+        background: rgba(15, 23, 42, 0.85) !important;
+        backdrop-filter: blur(20px) !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(255,255,255,0.08) !important;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important;
+        overflow: hidden;
+        z-index: 9999 !important;
+        margin-top: 12px;
+    }
+
+    .user-menu-item {
+        cursor: pointer;
+        border-radius: 8px;
+        transition: background-color 0.15s ease;
+    }
+    .user-menu-item:hover {
+        background-color: rgba(255,255,255,0.06);
+    }
+    .user-menu-item-danger:hover {
+        background-color: rgba(248, 113, 113, 0.08);
+    }
+</style>
+
+@code {
+    private bool _isOpen = false;
+    private string? _displayName;
+    private string? _email;
+    private string _initial = "U";
+
+    private void ToggleMenu() => _isOpen = !_isOpen;
+    private void CloseMenu() => _isOpen = false;
+
+    protected override void OnInitialized()
+    {
+        AuthStateProvider.AuthenticationStateChanged += OnAuthStateChanged;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserAsync();
+    }
+
+    private async void OnAuthStateChanged(Task<AuthenticationState> task)
+    {
+        await LoadUserAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadUserAsync()
+    {
+        var user = await AuthService.GetCurrentUserAsync();
+        if (user != null)
+        {
+            _displayName = user.Username;
+            _email = user.Email;
+            _initial = !string.IsNullOrWhiteSpace(user.Username)
+                ? user.Username.Substring(0, 1).ToUpperInvariant()
+                : "U";
+        }
+        else
+        {
+            _displayName = null;
+            _email = null;
+            _initial = "U";
+        }
+    }
+
+    private void GoToSettings()
+    {
+        CloseMenu();
+        Navigation.NavigateTo("/settings");
+    }
+
+    private async Task HandleLogout()
+    {
+        CloseMenu();
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+
+    public void Dispose()
+    {
+        AuthStateProvider.AuthenticationStateChanged -= OnAuthStateChanged;
+    }
+}
