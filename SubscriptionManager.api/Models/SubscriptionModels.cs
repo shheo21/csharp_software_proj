@@ -44,6 +44,32 @@ public class SubscriptionDto
     public int DaysUntilBilling { get; set; }
 }
 
+public class CreateSubscriptionRequest
+{
+    [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "구독 이름은 필수입니다.")]
+    [System.ComponentModel.DataAnnotations.MaxLength(100, ErrorMessage = "구독 이름은 100자 이하여야 합니다.")]
+    public string Name { get; set; } = string.Empty;
+
+    [System.ComponentModel.DataAnnotations.MaxLength(50, ErrorMessage = "카테고리는 50자 이하여야 합니다.")]
+    public string Category { get; set; } = "기타";
+
+    [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "금액은 필수입니다.")]
+    [System.ComponentModel.DataAnnotations.Range(0.01, double.MaxValue, ErrorMessage = "금액은 0보다 커야 합니다.")]
+    public decimal Amount { get; set; }
+
+    [System.ComponentModel.DataAnnotations.MaxLength(10)]
+    public string Currency { get; set; } = "KRW";
+
+    [System.ComponentModel.DataAnnotations.RegularExpression("^(MONTHLY|YEARLY)$", ErrorMessage = "결제 주기는 MONTHLY 또는 YEARLY여야 합니다.")]
+    public string BillingCycle { get; set; } = "MONTHLY";
+
+    [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "다음 결제일은 필수입니다.")]
+    public DateTime NextBillingDate { get; set; }
+
+    public string? IconEmoji { get; set; }
+    public string? Notes { get; set; }
+}
+
 public class SubscriptionQueryParams
 {
     public string? Search { get; set; }
