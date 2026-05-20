@@ -22,11 +22,8 @@ public class SubscriptionsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetSubscriptions([FromQuery] SubscriptionQueryParams query)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = GetUserId();
         if (userId == null) return Unauthorized();
-
-        var exchangeRates = await _db.ExchangeRates
-            .ToDictionaryAsync(r => r.CurrencyCode, r => r.RateToKRW);
 
         var q = _db.Subscriptions.Where(s => s.UserId == userId);
 
@@ -44,9 +41,8 @@ public class SubscriptionsController : ControllerBase
         if (!string.IsNullOrWhiteSpace(query.Currency))
             q = q.Where(s => s.Currency == query.Currency.Trim().ToUpper());
 
-        var subscriptions = await q
-            .OrderBy(s => s.NextBillingDate)
-            .ToListAsync();
+        var subscriptions = await q.OrderBy(s => s.NextBillingDate).ToListAsync();
+        var exchangeRates = await LoadExchangeRatesAsync();
 
         return Ok(subscriptions.Select(s => ToDto(s, exchangeRates)));
     }
@@ -54,16 +50,11 @@ public class SubscriptionsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateSubscription([FromBody] CreateSubscriptionRequest req)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = GetUserId();
         if (userId == null) return Unauthorized();
 
-        var currency = req.Currency.Trim().ToUpper();
-        if (currency != "KRW")
-        {
-            var exists = await _db.ExchangeRates.AnyAsync(r => r.CurrencyCode == currency);
-            if (!exists)
-                return BadRequest(new { message = $"지원하지 않는 통화 코드입니다: {currency}" });
-        }
+        var (currency, currencyError) = await ValidateCurrencyAsync(req.Currency);
+        if (currencyError != null) return currencyError;
 
         var subscription = new Subscription
         {
@@ -82,16 +73,13 @@ public class SubscriptionsController : ControllerBase
         _db.Subscriptions.Add(subscription);
         await _db.SaveChangesAsync();
 
-        var exchangeRates = await _db.ExchangeRates
-            .ToDictionaryAsync(r => r.CurrencyCode, r => r.RateToKRW);
-
-        return CreatedAtAction(nameof(GetSubscriptions), ToDto(subscription, exchangeRates));
+        return CreatedAtAction(nameof(GetSubscriptions), ToDto(subscription, await LoadExchangeRatesAsync()));
     }
 
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateSubscription(int id, [FromBody] UpdateSubscriptionRequest req)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = GetUserId();
         if (userId == null) return Unauthorized();
 
         var subscription = await _db.Subscriptions
@@ -100,13 +88,8 @@ public class SubscriptionsController : ControllerBase
         if (subscription == null)
             return NotFound(new { message = "구독을 찾을 수 없습니다." });
 
-        var currency = req.Currency.Trim().ToUpper();
-        if (currency != "KRW")
-        {
-            var exists = await _db.ExchangeRates.AnyAsync(r => r.CurrencyCode == currency);
-            if (!exists)
-                return BadRequest(new { message = $"지원하지 않는 통화 코드입니다: {currency}" });
-        }
+        var (currency, currencyError) = await ValidateCurrencyAsync(req.Currency);
+        if (currencyError != null) return currencyError;
 
         subscription.Name = req.Name.Trim();
         subscription.Category = req.Category.Trim();
@@ -120,16 +103,13 @@ public class SubscriptionsController : ControllerBase
 
         await _db.SaveChangesAsync();
 
-        var exchangeRates = await _db.ExchangeRates
-            .ToDictionaryAsync(r => r.CurrencyCode, r => r.RateToKRW);
-
-        return Ok(ToDto(subscription, exchangeRates));
+        return Ok(ToDto(subscription, await LoadExchangeRatesAsync()));
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteSubscription(int id)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = GetUserId();
         if (userId == null) return Unauthorized();
 
         var subscription = await _db.Subscriptions
@@ -142,6 +122,20 @@ public class SubscriptionsController : ControllerBase
         await _db.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    private string? GetUserId() =>
+        User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+    private Task<Dictionary<string, decimal>> LoadExchangeRatesAsync() =>
+        _db.ExchangeRates.ToDictionaryAsync(r => r.CurrencyCode, r => r.RateToKRW);
+
+    private async Task<(string currency, IActionResult? error)> ValidateCurrencyAsync(string raw)
+    {
+        var currency = raw.Trim().ToUpper();
+        if (currency != "KRW" && !await _db.ExchangeRates.AnyAsync(r => r.CurrencyCode == currency))
+            return (currency, BadRequest(new { message = $"지원하지 않는 통화 코드입니다: {currency}" }));
+        return (currency, null);
     }
 
     private static SubscriptionDto ToDto(Subscription s, Dictionary<string, decimal> exchangeRates)
