@@ -1,0 +1,351 @@
+@page "/settings"
+@using System.ComponentModel.DataAnnotations
+@inject IAuthService AuthService
+@inject ICategoryService CategoryService
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+@implements IDisposable
+
+<PageTitle>설정 — SubTrack</PageTitle>
+
+<div class="fade-in-up">
+    <div class="d-flex align-center justify-space-between mb-6">
+        <div>
+            <div class="page-title">설정</div>
+            <div class="page-subtitle">계정 · 알림 · 카테고리를 관리합니다</div>
+        </div>
+    </div>
+
+    <MudGrid Spacing="3">
+
+        <!-- 1. 프로필 -->
+        <MudItem xs="12" Class="fade-in-up fade-in-up-1">
+            <div class="glass-card pa-5">
+                <div class="d-flex align-center mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Person"
+                             Style="color: var(--gold-400);" Class="mr-2" />
+                    <MudText Typo="Typo.h6"
+                             Style="font-weight:700; color: var(--text-primary);">
+                        프로필
+                    </MudText>
+                </div>
+
+                <!-- 식별 정보 (정적 표시) -->
+                <div class="d-flex align-center pa-2 mb-3"
+                     style="background: rgba(255,255,255,0.03); border-radius: 10px;">
+                    <MudAvatar Color="Color.Primary" Size="Size.Medium" Class="mr-3">
+                        @(_initial)
+                    </MudAvatar>
+                    <div style="min-width:0;">
+                        <MudText Typo="Typo.subtitle1"
+                                 Style="font-weight:700; color: var(--text-primary); line-height:1.2;">
+                            @(string.IsNullOrWhiteSpace(_displayName) ? "사용자" : _displayName)
+                        </MudText>
+                        <MudText Typo="Typo.caption"
+                                 Style="color: var(--text-secondary);">
+                            @(string.IsNullOrWhiteSpace(_email) ? "로그인이 필요합니다" : _email)
+                        </MudText>
+                    </div>
+                </div>
+
+                <MudForm @ref="_profileForm" @bind-IsValid="_profileValid">
+                    <MudGrid>
+                        <MudItem xs="12" md="6">
+                            <MudTextField T="string" @bind-Value="_displayName"
+                                          Label="표시 이름" Variant="Variant.Outlined"
+                                          Required="true" RequiredError="표시 이름을 입력하세요" />
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.subtitle2"
+                                     Style="color: var(--text-secondary);" Class="mt-2">
+                                비밀번호 변경 (선택)
+                            </MudText>
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudTextField T="string" @bind-Value="_currentPassword"
+                                          Label="현재 비밀번호" InputType="InputType.Password"
+                                          Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudTextField T="string" @bind-Value="_newPassword"
+                                          Label="새 비밀번호" InputType="InputType.Password"
+                                          Variant="Variant.Outlined"
+                                          Validation="@(new Func<string, IEnumerable<string>>(ValidatePassword))" />
+                        </MudItem>
+                    </MudGrid>
+
+                    <div class="d-flex justify-end mt-4">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                   Disabled="@(!_profileValid || _profileSaving)"
+                                   OnClick="SaveProfile">
+                            @(_profileSaving ? "저장 중..." : "저장")
+                        </MudButton>
+                    </div>
+                </MudForm>
+            </div>
+        </MudItem>
+
+        <!-- 2. 알림 -->
+        <MudItem xs="12" Class="fade-in-up fade-in-up-2">
+            <div class="glass-card pa-5">
+                <div class="d-flex align-center mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Notifications"
+                             Style="color: var(--gold-400);" Class="mr-2" />
+                    <MudText Typo="Typo.h6"
+                             Style="font-weight:700; color: var(--text-primary);">
+                        알림
+                    </MudText>
+                </div>
+
+                <div class="d-flex align-center justify-space-between mb-3">
+                    <div>
+                        <MudText Typo="Typo.body1"
+                                 Style="color: var(--text-primary);">알림 받기</MudText>
+                        <MudText Typo="Typo.caption" Style="color: var(--text-secondary);">
+                            결제 예정일이 다가오면 상단 알림 메뉴에 표시합니다
+                        </MudText>
+                    </div>
+                    <MudSwitch @bind-Value="_alarmEnabled" Color="Color.Primary" />
+                </div>
+
+                <MudDivider Style="background-color: rgba(255,255,255,0.08); margin: 12px 0;" />
+
+                <MudText Typo="Typo.body2" Style="color: var(--text-secondary);" Class="mb-2">
+                    알림 임계일
+                </MudText>
+                <MudRadioGroup T="int" @bind-Value="_reminderDays" Disabled="@(!_alarmEnabled)">
+                    <MudRadio T="int" Value="@(1)" Color="Color.Primary">D-1</MudRadio>
+                    <MudRadio T="int" Value="@(3)" Color="Color.Primary">D-3</MudRadio>
+                    <MudRadio T="int" Value="@(7)" Color="Color.Primary">D-7</MudRadio>
+                </MudRadioGroup>
+
+                <div class="d-flex justify-end mt-4">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               Disabled="@_notiSaving"
+                               OnClick="SaveNotifications">
+                        @(_notiSaving ? "저장 중..." : "저장")
+                    </MudButton>
+                </div>
+            </div>
+        </MudItem>
+
+        <!-- 3. 카테고리 -->
+        <MudItem xs="12" Class="fade-in-up fade-in-up-3">
+            <div class="glass-card pa-5">
+                <div class="d-flex align-center mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.LocalOffer"
+                             Style="color: var(--gold-400);" Class="mr-2" />
+                    <MudText Typo="Typo.h6"
+                             Style="font-weight:700; color: var(--text-primary);">
+                        카테고리
+                    </MudText>
+                </div>
+
+                @if (_categoriesLoading)
+                {
+                    <div class="d-flex justify-center pa-4">
+                        <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
+                    </div>
+                }
+                else
+                {
+                    @if (CategoryService.Categories.Count == 0)
+                    {
+                        <MudText Typo="Typo.body2" Style="color: var(--text-secondary);" Class="pa-4 text-center">
+                            등록된 카테고리가 없습니다
+                        </MudText>
+                    }
+                    else
+                    {
+                        @foreach (var cat in CategoryService.Categories)
+                        {
+                            <div class="category-item d-flex align-center pa-2 mb-2"
+                                 style="background: rgba(255,255,255,0.04); border-radius: 8px;">
+                                <MudIcon Icon="@Icons.Material.Filled.Label"
+                                         Style="color: var(--text-secondary);"
+                                         Class="mr-2" Size="Size.Small" />
+                                <MudText Typo="Typo.body2"
+                                         Style="color: var(--text-primary); flex:1;">@cat</MudText>
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                               Color="Color.Default" Size="Size.Small"
+                                               OnClick="@(() => DeleteCategory(cat))" />
+                            </div>
+                        }
+                    }
+
+                    <div class="d-flex align-center mt-3">
+                        <MudTextField T="string" @bind-Value="_newCategory"
+                                      Placeholder="새 카테고리 이름"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      Immediate="true"
+                                      Style="flex:1; margin-right: 8px;" />
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Add"
+                                   Disabled="@(string.IsNullOrWhiteSpace(_newCategory))"
+                                   OnClick="AddCategory">
+                            추가
+                        </MudButton>
+                    </div>
+                }
+            </div>
+        </MudItem>
+
+    </MudGrid>
+</div>
+
+@code {
+    // 프로필
+    private MudForm _profileForm = null!;
+    private bool _profileValid;
+    private bool _profileSaving;
+    private string _displayName = string.Empty;
+    private string _email = string.Empty;
+    private string _initial = "U";
+    private string _currentPassword = string.Empty;
+    private string _newPassword = string.Empty;
+
+    // 알림
+    private bool _alarmEnabled = true;
+    private int _reminderDays = 7;
+    private bool _notiSaving;
+
+    // 카테고리 (CategoryService 가 공유 상태 보관)
+    private bool _categoriesLoading = true;
+    private string _newCategory = string.Empty;
+
+    private const string KeyNotiEnabled = "subtrack_noti_enabled";
+    private const string KeyNotiDays = "subtrack_noti_days";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProfileAsync();
+        await LoadNotificationsAsync();
+        await LoadCategoriesAsync();
+        CategoryService.OnChange += OnCategoriesChanged;
+    }
+
+    private void OnCategoriesChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        CategoryService.OnChange -= OnCategoriesChanged;
+    }
+
+    private async Task LoadProfileAsync()
+    {
+        var user = await AuthService.GetCurrentUserAsync();
+        if (user != null)
+        {
+            _displayName = user.Username;
+            _email = user.Email;
+            _initial = !string.IsNullOrWhiteSpace(user.Username)
+                ? user.Username.Substring(0, 1).ToUpperInvariant()
+                : "U";
+        }
+    }
+
+    private async Task LoadNotificationsAsync()
+    {
+        try
+        {
+            _alarmEnabled = await GetLocalBool(KeyNotiEnabled, true);
+            _reminderDays = await GetLocalInt(KeyNotiDays, 7);
+        }
+        catch { /* localStorage 미접근 시 기본값 유지 */ }
+    }
+
+    private async Task LoadCategoriesAsync()
+    {
+        _categoriesLoading = true;
+        try
+        {
+            await CategoryService.EnsureLoadedAsync();
+        }
+        finally
+        {
+            _categoriesLoading = false;
+        }
+    }
+
+    private IEnumerable<string> ValidatePassword(string? password)
+    {
+        if (string.IsNullOrEmpty(password)) yield break; // 선택 필드
+        if (password.Length < 8)
+            yield return "비밀번호는 8자 이상이어야 합니다";
+    }
+
+    private async Task SaveProfile()
+    {
+        _profileSaving = true;
+        try
+        {
+            // TODO: 백엔드에 PATCH /api/auth/me 등 추가되면 실제 호출로 교체
+            await Task.Delay(200);
+            _currentPassword = string.Empty;
+            _newPassword = string.Empty;
+            Snackbar.Add("프로필이 저장되었습니다 (백엔드 미구현 — UI 검증만 동작)", Severity.Info);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"저장 실패: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _profileSaving = false;
+        }
+    }
+
+    private async Task SaveNotifications()
+    {
+        _notiSaving = true;
+        try
+        {
+            await JS.InvokeVoidAsync("localStorage.setItem", KeyNotiEnabled,
+                _alarmEnabled ? "true" : "false");
+            await JS.InvokeVoidAsync("localStorage.setItem", KeyNotiDays,
+                _reminderDays.ToString());
+            Snackbar.Add("알림 설정이 저장되었습니다", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"저장 실패: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _notiSaving = false;
+        }
+    }
+
+    private async Task AddCategory()
+    {
+        var name = _newCategory?.Trim();
+        if (string.IsNullOrWhiteSpace(name)) return;
+        if (CategoryService.Categories.Contains(name))
+        {
+            Snackbar.Add("이미 존재하는 카테고리입니다", Severity.Warning);
+            return;
+        }
+        await CategoryService.AddAsync(name);
+        _newCategory = string.Empty;
+    }
+
+    private async Task DeleteCategory(string name)
+    {
+        await CategoryService.RemoveAsync(name);
+    }
+
+    private async Task<bool> GetLocalBool(string key, bool fallback)
+    {
+        var v = await JS.InvokeAsync<string?>("localStorage.getItem", key);
+        if (string.IsNullOrWhiteSpace(v)) return fallback;
+        return v.Equals("true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task<int> GetLocalInt(string key, int fallback)
+    {
+        var v = await JS.InvokeAsync<string?>("localStorage.getItem", key);
+        if (string.IsNullOrWhiteSpace(v)) return fallback;
+        return int.TryParse(v, out var n) ? n : fallback;
+    }
+}
