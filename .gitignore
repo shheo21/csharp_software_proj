@@ -493,6 +493,8 @@ $RECYCLE.BIN/
 .claude/
 .codex/
 .cursor/
+CLAUDE.md
+AGENTS.md
 
 # Development files
 .vscode/
