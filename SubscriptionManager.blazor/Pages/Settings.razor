@@ -115,11 +115,16 @@
                 <MudText Typo="Typo.body2" Style="color: var(--text-secondary);" Class="mb-2">
                     알림 임계일
                 </MudText>
-                <MudRadioGroup T="int" @bind-Value="_reminderDays" Disabled="@(!_alarmEnabled)">
-                    <MudRadio T="int" Value="@(1)" Color="Color.Primary">D-1</MudRadio>
-                    <MudRadio T="int" Value="@(3)" Color="Color.Primary">D-3</MudRadio>
-                    <MudRadio T="int" Value="@(7)" Color="Color.Primary">D-7</MudRadio>
-                </MudRadioGroup>
+                <div class="d-flex align-center" style="gap: 10px;">
+                    <MudText Typo="Typo.body2" Style="color: var(--text-primary);">결제일</MudText>
+                    <div style="width: 96px; flex: 0 0 auto;">
+                        <MudNumericField T="int" @bind-Value="_reminderDays"
+                                         Min="1" Max="30"
+                                         Variant="Variant.Outlined" Margin="Margin.Dense"
+                                         Disabled="@(!_alarmEnabled)" />
+                    </div>
+                    <MudText Typo="Typo.body2" Style="color: var(--text-primary);">일 전에 알림 받기</MudText>
+                </div>
 
                 <div class="d-flex justify-end mt-4">
                     <MudButton Variant="Variant.Filled" Color="Color.Primary"
