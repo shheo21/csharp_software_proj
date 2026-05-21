@@ -1,0 +1,206 @@
+@page "/register"
+@attribute [AllowAnonymous]
+@layout EmptyLayout
+@inject IAuthService AuthService
+@inject NavigationManager Nav
+
+<PageTitle>회원가입 — SubTrack</PageTitle>
+
+<div class="auth-bg">
+    <div class="auth-card fade-in-up">
+        <div class="auth-logo">
+            <span style="color: var(--gold-400); font-size: 2rem;">✦</span>
+            <span class="auth-brand">SubTrack</span>
+        </div>
+        <div class="auth-subtitle">지금 시작하세요</div>
+
+        <MudForm @ref="_form" Class="mt-6">
+            <MudTextField @bind-Value="_username"
+                          Label="사용자 이름"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Class="mb-3"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Person"
+                          Required="true"
+                          Style="background:rgba(255,255,255,0.03);" />
+
+            <MudTextField @bind-Value="_email"
+                          Label="이메일"
+                          InputType="InputType.Email"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Class="mb-3"
+                          Adornment="Adornment.Start"
+                          
+                          AdornmentIcon="@Icons.Material.Filled.Email"
+                          Required="true"
+                          Style="background:rgba(255,255,255,0.03);" />
+
+            <MudTextField @bind-Value="_password"
+                          Label="비밀번호 (6자 이상)"
+                          InputType="@_pwdType"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Class="mb-3"
+                          Adornment="Adornment.End"
+                          AdornmentIcon="@_pwdIcon"
+                          OnAdornmentClick="TogglePassword"
+                          Required="true"
+                          Style="background:rgba(255,255,255,0.03);" />
+
+            <MudTextField @bind-Value="_confirmPassword"
+                          Label="비밀번호 확인"
+                          InputType="InputType.Password"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Class="mb-4"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Lock"
+                          Required="true"
+                          Style="background:rgba(255,255,255,0.03);" />
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <div class="auth-error mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Small" Class="mr-1" />
+                    @_error
+                </div>
+            }
+
+            @if (_success)
+            {
+                <div class="auth-success mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
+                    회원가입 완료! 로그인 페이지로 이동합니다...
+                </div>
+            }
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       FullWidth="true" Size="Size.Large"
+                       Disabled="_loading || _success" OnClick="HandleRegister"
+                       Style="border-radius:12px; font-weight:700; height:48px; font-size:1rem;">
+                @if (_loading)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    <span>가입 중...</span>
+                }
+                else { <span>회원가입</span> }
+            </MudButton>
+        </MudForm>
+
+        <div class="auth-divider my-5"><span>또는</span></div>
+
+        <div class="text-center">
+            <MudText Typo="Typo.body2" Style="color: var(--text-secondary);">
+                이미 계정이 있으신가요?
+                <MudLink Href="/login" Style="color: var(--gold-400); font-weight:600; text-decoration:none;">
+                    로그인
+                </MudLink>
+            </MudText>
+        </div>
+    </div>
+</div>
+
+<style>
+    .auth-bg {
+        min-height: 100vh;
+        display: flex; align-items: center; justify-content: center;
+        padding: 24px;
+    }
+    .auth-card {
+        width: 100%; max-width: 420px;
+        background: rgba(15,15,27,0.85);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--border-subtle);
+        border-radius: 24px;
+        padding: 40px;
+    }
+    .auth-logo {
+        display: flex; align-items: center; justify-content: center;
+        gap: 10px; margin-bottom: 8px;
+    }
+    .auth-brand { font-size: 1.8rem; font-weight: 800; color: var(--text-primary); letter-spacing: 0.05em; }
+    .auth-subtitle { text-align: center; color: var(--text-secondary); font-size: 0.9rem; }
+    .auth-error {
+        background: rgba(255,71,87,0.1); border: 1px solid rgba(255,71,87,0.3);
+        border-radius: 10px; padding: 10px 14px;
+        color: var(--accent-red); font-size: 0.85rem;
+        display: flex; align-items: center;
+    }
+    .auth-success {
+        background: rgba(46,213,115,0.1); border: 1px solid rgba(46,213,115,0.3);
+        border-radius: 10px; padding: 10px 14px;
+        color: var(--accent-green); font-size: 0.85rem;
+        display: flex; align-items: center;
+    }
+    .auth-divider { position: relative; text-align: center; }
+    .auth-divider::before {
+        content: ''; position: absolute; top: 50%; left: 0; right: 0;
+        height: 1px; background: var(--border-subtle);
+    }
+    .auth-divider span {
+        position: relative; background: rgba(15,15,27,0.85);
+        padding: 0 12px; color: var(--text-secondary); font-size: 0.82rem;
+    }
+</style>
+
+@code {
+    private MudForm? _form;
+    private string _username = "";
+    private string _email = "";
+    private string _password = "";
+    private string _confirmPassword = "";
+    private string _error = "";
+    private bool _loading = false;
+    private bool _success = false;
+    private InputType _pwdType = InputType.Password;
+    private string _pwdIcon = Icons.Material.Filled.VisibilityOff;
+
+    private void TogglePassword()
+    {
+        if (_pwdType == InputType.Password)
+        {
+            _pwdType = InputType.Text;
+            _pwdIcon = Icons.Material.Filled.Visibility;
+        }
+        else
+        {
+            _pwdType = InputType.Password;
+            _pwdIcon = Icons.Material.Filled.VisibilityOff;
+        }
+    }
+
+    private async Task HandleRegister()
+    {
+        _error = "";
+        if (string.IsNullOrWhiteSpace(_username) || string.IsNullOrWhiteSpace(_email) || string.IsNullOrWhiteSpace(_password))
+        {
+            _error = "모든 필드를 입력해주세요.";
+            return;
+        }
+        if (_password.Length < 6) { _error = "비밀번호는 6자 이상이어야 합니다."; return; }
+        if (_password != _confirmPassword) { _error = "비밀번호가 일치하지 않습니다."; return; }
+
+        _loading = true;
+        var (success, error) = await AuthService.RegisterAsync(new RegisterRequest
+        {
+            DisplayName = _username,
+            Email = _email,
+            Password = _password
+        });
+        _loading = false;
+
+        if (success)
+        {
+            _success = true;
+            StateHasChanged();
+            await Task.Delay(1500);
+            Nav.NavigateTo("/login");
+        }
+        else
+        {
+            _error = error ?? "회원가입에 실패했습니다.";
+        }
+    }
+}
