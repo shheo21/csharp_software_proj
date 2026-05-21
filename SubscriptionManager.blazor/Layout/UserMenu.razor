@@ -1,9 +1,12 @@
 @using MudBlazor
+@* TODO(auth-branch): AuthService / AuthenticationStateProvider 가 auth 브랜치로 이동, 머지 시 아래 주석 복원 *@
+@*
 @using Microsoft.AspNetCore.Components.Authorization
 @using SubscriptionManager.blazor.Services
 @inject IAuthService AuthService
-@inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
+*@
+@inject NavigationManager Navigation
 
 <div style="margin-right: 8px; position: relative; display: inline-block;">
 
@@ -98,40 +101,46 @@
     private void ToggleMenu() => _isOpen = !_isOpen;
     private void CloseMenu() => _isOpen = false;
 
-    protected override void OnInitialized()
-    {
-        AuthStateProvider.AuthenticationStateChanged += OnAuthStateChanged;
-    }
-
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadUserAsync();
-    }
-
-    private async void OnAuthStateChanged(Task<AuthenticationState> task)
-    {
-        await LoadUserAsync();
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task LoadUserAsync()
-    {
-        var user = await AuthService.GetCurrentUserAsync();
-        if (user != null)
-        {
-            _displayName = user.Username;
-            _email = user.Email;
-            _initial = !string.IsNullOrWhiteSpace(user.Username)
-                ? user.Username.Substring(0, 1).ToUpperInvariant()
-                : "U";
-        }
-        else
-        {
-            _displayName = null;
-            _email = null;
-            _initial = "U";
-        }
-    }
+    // TODO(auth-branch): auth 브랜치 머지 후 아래 주석 복원
+    // protected override void OnInitialized()
+    // {
+    //     AuthStateProvider.AuthenticationStateChanged += OnAuthStateChanged;
+    // }
+    //
+    // protected override async Task OnInitializedAsync()
+    // {
+    //     await LoadUserAsync();
+    // }
+    //
+    // private async void OnAuthStateChanged(Task<AuthenticationState> task)
+    // {
+    //     await LoadUserAsync();
+    //     await InvokeAsync(StateHasChanged);
+    // }
+    //
+    // private async Task LoadUserAsync()
+    // {
+    //     var user = await AuthService.GetCurrentUserAsync();
+    //     if (user != null)
+    //     {
+    //         _displayName = user.Username;
+    //         _email = user.Email;
+    //         _initial = !string.IsNullOrWhiteSpace(user.Username)
+    //             ? user.Username.Substring(0, 1).ToUpperInvariant()
+    //             : "U";
+    //     }
+    //     else
+    //     {
+    //         _displayName = null;
+    //         _email = null;
+    //         _initial = "U";
+    //     }
+    // }
+    //
+    // public void Dispose()
+    // {
+    //     AuthStateProvider.AuthenticationStateChanged -= OnAuthStateChanged;
+    // }
 
     private void GoToSettings()
     {
@@ -139,15 +148,10 @@
         Navigation.NavigateTo("/settings");
     }
 
-    private async Task HandleLogout()
+    private void HandleLogout()
     {
         CloseMenu();
-        await AuthService.LogoutAsync();
+        // TODO(auth-branch): await AuthService.LogoutAsync();
         Navigation.NavigateTo("/login", forceLoad: true);
-    }
-
-    public void Dispose()
-    {
-        AuthStateProvider.AuthenticationStateChanged -= OnAuthStateChanged;
     }
 }
