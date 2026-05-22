@@ -89,5 +89,6 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
                 e.ReadAt,
                 e.RenewalDate
             });
+        }); //
     }
 }
