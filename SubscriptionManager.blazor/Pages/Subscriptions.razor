@@ -12,13 +12,22 @@
             <div class="page-title">구독 관리</div>
             <div class="page-subtitle">등록된 구독 서비스를 관리하세요</div>
         </div>
-        <div class="d-flex gap-2 align-center">
+        <div class="d-flex gap-2 align-center" style="position: relative;">
             <MudButton Variant="Variant.Outlined" Color="Color.Primary"
                        StartIcon="@Icons.Material.Filled.Download"
-                       OnClick="ExportToCsv"
+                       OnClick="ToggleExportPopover"
                        Style="border-radius:12px; font-weight:700; padding:8px 16px; background: rgba(99,102,241,0.05); border-color: rgba(99,102,241,0.3);">
                 CSV 내보내기
             </MudButton>
+
+            <MudPopover Open="@_isExportOpen" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Class="pa-4 glass-popover-menu" Style="width: 280px; z-index: 9999;">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">파일 이름 입력</MudText>
+                <MudTextField @bind-Value="_exportFileName" Label="파일명" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3" />
+                <div class="d-flex justify-end gap-2">
+                    <MudButton OnClick="ToggleExportPopover" Size="Size.Small">취소</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" OnClick="ConfirmExport">다운로드</MudButton>
+                </div>
+            </MudPopover>
 
             <MudButton Variant="Variant.Filled" Color="Color.Primary"
                        StartIcon="@Icons.Material.Filled.Add"
@@ -129,36 +138,21 @@
                                 </div>
                             </td>
                             <td style="padding: 16px 8px; text-align: center;">
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Style="@GetCategoryChipStyle(sub.Category)">
-                                    @sub.Category
-                                </MudChip>
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Style="@GetCategoryChipStyle(sub.Category)">@sub.Category</MudChip>
                             </td>
                             <td style="padding: 16px 8px; text-align: left;">
-                                <div style="font-weight: 800; color: var(--text-primary); font-size: 0.95rem;">
-                                    @(sub.Currency == "KRW" ? "₩" : "$")@sub.Amount.ToString("N2")
-                                </div>
+                                <div style="font-weight: 800; color: var(--text-primary); font-size: 0.95rem;">@(sub.Currency == "KRW" ? "₩" : "$")@sub.Amount.ToString("N2")</div>
                                 <div style="font-size: 0.75rem; color: var(--text-secondary);">@sub.Currency</div>
                             </td>
                             <td style="padding: 16px 8px; text-align: left;">
-                                <div style="font-weight: 800; color: var(--accent-blue); font-size: 0.95rem;">
-                                    ₩@sub.AmountInKRW.ToString("N0")
-                                </div>
-                                @if(sub.Currency != "KRW") {
-                                    <div style="font-size: 0.7rem; color: var(--text-secondary);">월 환산 ₩@sub.MonthlyAmountInKRW.ToString("N0")</div>
-                                }
+                                <div style="font-weight: 800; color: var(--accent-blue); font-size: 0.95rem;">₩@sub.AmountInKRW.ToString("N0")</div>
                             </td>
                             <td style="padding: 16px 8px; text-align: center;">
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Style="color: #52c41a; border-color: rgba(82,196,26,0.5); background: rgba(82,196,26,0.05);">
-                                    @(sub.BillingCycle == "MONTHLY" ? "월간" : "연간")
-                                </MudChip>
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Style="color: #52c41a; border-color: rgba(82,196,26,0.5); background: rgba(82,196,26,0.05);">@(sub.BillingCycle == "MONTHLY" ? "월간" : "연간")</MudChip>
                             </td>
-                            <td style="padding: 16px 8px; text-align: center; color: var(--text-primary); font-weight: 500; font-size: 0.9rem;">
-                                @sub.NextBillingDate.ToString("yyyy.MM.dd")
-                            </td>
+                            <td style="padding: 16px 8px; text-align: center; color: var(--text-primary); font-weight: 500; font-size: 0.9rem;">@sub.NextBillingDate.ToString("yyyy.MM.dd")</td>
                             <td style="padding: 16px 8px; text-align: center;">
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Style="@GetDDayChipStyle(sub.DaysUntilBilling)">
-                                    D-@sub.DaysUntilBilling
-                                </MudChip>
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Style="@GetDDayChipStyle(sub.DaysUntilBilling)">D-@sub.DaysUntilBilling</MudChip>
                             </td>
                             <td style="padding: 16px 8px; text-align: center;">
                                 <MudSwitch @bind-Value="sub.IsActive" Color="Color.Primary" Class="custom-purple-toggle mx-auto" Style="margin-left: 12px;" />
@@ -179,14 +173,15 @@
     .custom-purple-toggle .mud-switch-track { background-color: #4f46e5; opacity: 0.4 !important; height: 18px; border-radius: 10px; }
     .custom-purple-toggle.mud-checked .mud-switch-thumb { background-color: #6366f1 !important; }
     .custom-purple-toggle.mud-checked .mud-switch-track { background-color: #6366f1 !important; opacity: 0.5 !important; }
-
     .table-row-hover:hover { background-color: rgba(255,255,255,0.03); }
+    .glass-popover-menu { background: rgba(15, 23, 42, 0.95) !important; backdrop-filter: blur(20px) !important; border-radius: 12px !important; border: 1px solid rgba(255,255,255,0.1) !important; box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important; }
 </style>
 
 @code {
     private List<SubscriptionDto> _subscriptions = new();
     private bool _loading = true;
-
+    private bool _isExportOpen = false;
+    private string _exportFileName = "나의_구독목록";
     private string _searchQuery = "";
     private string _filterCategory = "전체";
     private string _filterCurrency = "전체";
@@ -201,121 +196,57 @@
         (_filterCycle == "전체" || s.BillingCycle == _filterCycle)
     ).OrderBy(s => s.DaysUntilBilling);
 
-    protected override async Task OnInitializedAsync()
+    private void ToggleExportPopover() => _isExportOpen = !_isExportOpen;
+
+    private async Task ConfirmExport()
     {
-        await LoadData();
+        _isExportOpen = false;
+        await ExportToCsv();
     }
+
+    private async Task ExportToCsv()
+    {
+        var fileName = _exportFileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase) ? _exportFileName : $"{_exportFileName}.csv";
+        var sb = new System.Text.StringBuilder();
+        sb.Append('\uFEFF');
+        sb.AppendLine("서비스 이름,카테고리,원화 환산 금액,결제 주기");
+
+        foreach (var sub in FilteredSubscriptions)
+        {
+            sb.AppendLine($"\"{sub.Name}\",\"{sub.Category}\",{sub.AmountInKRW},{(sub.BillingCycle == "MONTHLY" ? "월간" : "연간")}");
+        }
+
+        var base64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(sb.ToString()));
+        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "text/csv;charset=utf-8;", base64);
+        Snackbar.Add($"'{fileName}' 다운로드 시작!", Severity.Success);
+    }
+
+    protected override async Task OnInitializedAsync() => await LoadData();
 
     private async Task LoadData()
     {
         _loading = true;
-        try
-        {
-            _subscriptions = await ApiService.GetSubscriptionsAsync();
-        }
-        catch
-        {
-            _subscriptions = GetMockSubscriptions();
-        }
-        finally
-        {
-            _loading = false;
-        }
-    }
-
-    
-    private async Task ExportToCsv()
-    {
-        var sb = new System.Text.StringBuilder();
-        sb.Append('\uFEFF'); 
-        sb.AppendLine("서비스,카테고리,결제금액,통화,원화환산(월간),결제주기,다음결제일,D-DAY,상태");
-
-        foreach (var sub in FilteredSubscriptions)
-        {
-            var name = $"\"{sub.Name}\"";
-            var category = $"\"{sub.Category}\"";
-            var amount = sub.Amount.ToString("0.##");
-            var monthlyKrw = sub.MonthlyAmountInKRW.ToString("0.##");
-            var cycle = sub.BillingCycle == "MONTHLY" ? "월간" : "연간";
-            var nextDate = sub.NextBillingDate.ToString("yyyy-MM-dd");
-            var status = sub.IsActive ? "활성" : "해지됨";
-
-            sb.AppendLine($"{name},{category},{amount},{sub.Currency},{monthlyKrw},{cycle},{nextDate},D-{sub.DaysUntilBilling},{status}");
-        }
-
-        var fileContent = sb.ToString();
-        var bytes = System.Text.Encoding.UTF8.GetBytes(fileContent);
-        var base64 = Convert.ToBase64String(bytes);
-
-        // wwwroot/index.html에 추가한 JS 함수 호출
-        await JSRuntime.InvokeVoidAsync("downloadFile", "SubTrack_구독목록.csv", "text/csv;charset=utf-8;", base64);
-        
-        Snackbar.Add("구독 목록이 CSV 파일로 다운로드되었습니다.", Severity.Success);
+        try { _subscriptions = await ApiService.GetSubscriptionsAsync(); }
+        catch { _subscriptions = GetMockSubscriptions(); }
+        finally { _loading = false; }
     }
 
     private void FilterChanged(IEnumerable<string> _) => StateHasChanged();
     private void FilterChanged(KeyboardEventArgs _) => StateHasChanged();
-    private void ResetFilters()
-    {
-        _searchQuery = "";
-        _filterCategory = "전체";
-        _filterCurrency = "전체";
-        _filterCycle = "전체";
-        StateHasChanged();
-    }
+    private void ResetFilters() { _searchQuery = ""; _filterCategory = "전체"; _filterCurrency = "전체"; _filterCycle = "전체"; StateHasChanged(); }
 
     private async Task OpenAddDialog()
     {
         var options = new DialogOptions { CloseOnEscapeKey = true, BackdropClick = false };
         var dialog = await DialogService.ShowAsync<AddSubDialog>("새 구독 추가", options);
         var result = await dialog.Result;
-        
-        if (result != null && !result.Canceled)
-        {
-            Snackbar.Add("새 구독이 추가되었습니다.", Severity.Success);
-            await LoadData();
-        }
+        if (result != null && !result.Canceled) { Snackbar.Add("새 구독이 추가되었습니다.", Severity.Success); await LoadData(); }
     }
 
-    private async Task OpenEditDialog(SubscriptionDto sub)
-    {
-        Snackbar.Add($"{sub.Name} 수정 창 열림 (구현 예정)", Severity.Info);
-    }
-
-    private void ToggleStatus(SubscriptionDto sub)
-    {
-        sub.IsActive = !sub.IsActive;
-        Snackbar.Add(sub.IsActive ? $"{sub.Name} 활성화 됨" : $"{sub.Name} 해지 처리됨", sub.IsActive ? Severity.Success : Severity.Warning);
-    }
-
-    private void DeleteSubscription(SubscriptionDto sub)
-    {
-        _subscriptions.Remove(sub);
-        Snackbar.Add($"{sub.Name} 삭제됨", Severity.Error);
-    }
-
-    private string GetCategoryChipStyle(string category) => category switch
-    {
-        "엔터테인먼트" => "color: #ff4d4f; border-color: rgba(255,77,79,0.5); background: rgba(255,77,79,0.05);",
-        "창작 도구" => "color: #ff75c3; border-color: rgba(255,117,195,0.5); background: rgba(255,117,195,0.05);",
-        "음악" => "color: #b37feb; border-color: rgba(179,127,235,0.5); background: rgba(179,127,235,0.05);",
-        "개발 도구" => "color: #69c0ff; border-color: rgba(105,192,255,0.5); background: rgba(105,192,255,0.05);",
-        _ => "color: var(--text-secondary); border-color: rgba(255,255,255,0.2);"
-    };
-
-    private string GetDDayChipStyle(int days)
-    {
-        if (days <= 3) return "color: #ff4d4f; border-color: rgba(255,77,79,0.5); background: rgba(255,77,79,0.05);";
-        if (days <= 7) return "color: #faad14; border-color: rgba(250,173,20,0.5); background: rgba(250,173,20,0.05);";
-        return "color: #52c41a; border-color: rgba(82,196,26,0.5); background: rgba(82,196,26,0.05);";
-    }
-
-    private List<SubscriptionDto> GetMockSubscriptions() => new()
-    {
-        new() { Id=1, Name="Netflix", Category="엔터테인먼트", Currency="KRW", Amount=17000, AmountInKRW=17000, MonthlyAmountInKRW=17000, BillingCycle="MONTHLY", NextBillingDate=DateTime.Now.AddDays(5), DaysUntilBilling=5, IconEmoji="🎬", IsActive=true },
-        new() { Id=2, Name="Adobe Creative Cloud", Category="창작 도구", Currency="USD", Amount=54.99m, AmountInKRW=75886, MonthlyAmountInKRW=75886, BillingCycle="MONTHLY", NextBillingDate=DateTime.Now.AddDays(12), DaysUntilBilling=12, IconEmoji="🎨", IsActive=true },
-        new() { Id=3, Name="CLIP STUDIO PAINT", Category="창작 도구", Currency="KRW", Amount=4800, AmountInKRW=4800, MonthlyAmountInKRW=400, BillingCycle="YEARLY", NextBillingDate=DateTime.Now.AddDays(45), DaysUntilBilling=45, IconEmoji="✏️", IsActive=true },
-        new() { Id=4, Name="Spotify", Category="음악", Currency="USD", Amount=10.99m, AmountInKRW=15166, MonthlyAmountInKRW=15166, BillingCycle="MONTHLY", NextBillingDate=DateTime.Now.AddDays(3), DaysUntilBilling=3, IconEmoji="🎵", IsActive=true },
-        new() { Id=5, Name="GitHub Copilot", Category="개발 도구", Currency="USD", Amount=10m, AmountInKRW=13800, MonthlyAmountInKRW=13800, BillingCycle="MONTHLY", NextBillingDate=DateTime.Now.AddDays(20), DaysUntilBilling=20, IconEmoji="💻", IsActive=true }
-    };
+    private async Task OpenEditDialog(SubscriptionDto sub) => Snackbar.Add($"{sub.Name} 수정 창 열림 (구현 예정)", Severity.Info);
+    private void ToggleStatus(SubscriptionDto sub) { sub.IsActive = !sub.IsActive; Snackbar.Add(sub.IsActive ? $"{sub.Name} 활성화 됨" : $"{sub.Name} 해지 처리됨", sub.IsActive ? Severity.Success : Severity.Warning); }
+    private void DeleteSubscription(SubscriptionDto sub) { _subscriptions.Remove(sub); Snackbar.Add($"{sub.Name} 삭제됨", Severity.Error); }
+    private string GetCategoryChipStyle(string category) => category switch { "엔터테인먼트" => "color: #ff4d4f; border-color: rgba(255,77,79,0.5); background: rgba(255,77,79,0.05);", "창작 도구" => "color: #ff75c3; border-color: rgba(255,117,195,0.5); background: rgba(255,117,195,0.05);", "음악" => "color: #b37feb; border-color: rgba(179,127,235,0.5); background: rgba(179,127,235,0.05);", "개발 도구" => "color: #69c0ff; border-color: rgba(105,192,255,0.5); background: rgba(105,192,255,0.05);", _ => "color: var(--text-secondary); border-color: rgba(255,255,255,0.2);" };
+    private string GetDDayChipStyle(int days) => days <= 3 ? "color: #ff4d4f; border-color: rgba(255,77,79,0.5); background: rgba(255,77,79,0.05);" : days <= 7 ? "color: #faad14; border-color: rgba(250,173,20,0.5); background: rgba(250,173,20,0.05);" : "color: #52c41a; border-color: rgba(82,196,26,0.5); background: rgba(82,196,26,0.05);";
+    private List<SubscriptionDto> GetMockSubscriptions() => new() { new() { Id=1, Name="Netflix", Category="엔터테인먼트", Currency="KRW", Amount=17000, AmountInKRW=17000, MonthlyAmountInKRW=17000, BillingCycle="MONTHLY", NextBillingDate=DateTime.Now.AddDays(5), DaysUntilBilling=5, IconEmoji="🎬", IsActive=true }, new() { Id=2, Name="Adobe Creative Cloud", Category="창작 도구", Currency="USD", Amount=54.99m, AmountInKRW=75886, MonthlyAmountInKRW=75886, BillingCycle="MONTHLY", NextBillingDate=DateTime.Now.AddDays(12), DaysUntilBilling=12, IconEmoji="🎨", IsActive=true }, new() { Id=3, Name="CLIP STUDIO PAINT", Category="창작 도구", Currency="KRW", Amount=4800, AmountInKRW=4800, MonthlyAmountInKRW=400, BillingCycle="YEARLY", NextBillingDate=DateTime.Now.AddDays(45), DaysUntilBilling=45, IconEmoji="✏️", IsActive=true }, new() { Id=4, Name="Spotify", Category="음악", Currency="USD", Amount=10.99m, AmountInKRW=15166, MonthlyAmountInKRW=15166, BillingCycle="MONTHLY", NextBillingDate=DateTime.Now.AddDays(3), DaysUntilBilling=3, IconEmoji="🎵", IsActive=true }, new() { Id=5, Name="GitHub Copilot", Category="개발 도구", Currency="USD", Amount=10m, AmountInKRW=13800, MonthlyAmountInKRW=13800, BillingCycle="MONTHLY", NextBillingDate=DateTime.Now.AddDays(20), DaysUntilBilling=20, IconEmoji="💻", IsActive=true } };
 }
