@@ -2,6 +2,7 @@
 @inject ISubscriptionApiService ApiService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject IJSRuntime JSRuntime
 
 <PageTitle>구독 관리 — SubTrack</PageTitle>
 
@@ -188,7 +189,7 @@
 
     private string _searchQuery = "";
     private string _filterCategory = "전체";
-    private string _filterCurrency = "전체"; 
+    private string _filterCurrency = "전체";
     private string _filterCycle = "전체";
 
     private IEnumerable<SubscriptionDto> FilteredSubscriptions => _subscriptions.Where(s =>
@@ -222,15 +223,38 @@
         }
     }
 
-     
-    private void ExportToCsv()
+    
+    private async Task ExportToCsv()
     {
-        Snackbar.Add("CSV 내보내기 버튼이 클릭", Severity.Info);
+        var sb = new System.Text.StringBuilder();
+        sb.Append('\uFEFF'); 
+        sb.AppendLine("서비스,카테고리,결제금액,통화,원화환산(월간),결제주기,다음결제일,D-DAY,상태");
+
+        foreach (var sub in FilteredSubscriptions)
+        {
+            var name = $"\"{sub.Name}\"";
+            var category = $"\"{sub.Category}\"";
+            var amount = sub.Amount.ToString("0.##");
+            var monthlyKrw = sub.MonthlyAmountInKRW.ToString("0.##");
+            var cycle = sub.BillingCycle == "MONTHLY" ? "월간" : "연간";
+            var nextDate = sub.NextBillingDate.ToString("yyyy-MM-dd");
+            var status = sub.IsActive ? "활성" : "해지됨";
+
+            sb.AppendLine($"{name},{category},{amount},{sub.Currency},{monthlyKrw},{cycle},{nextDate},D-{sub.DaysUntilBilling},{status}");
+        }
+
+        var fileContent = sb.ToString();
+        var bytes = System.Text.Encoding.UTF8.GetBytes(fileContent);
+        var base64 = Convert.ToBase64String(bytes);
+
+        // wwwroot/index.html에 추가한 JS 함수 호출
+        await JSRuntime.InvokeVoidAsync("downloadFile", "SubTrack_구독목록.csv", "text/csv;charset=utf-8;", base64);
+        
+        Snackbar.Add("구독 목록이 CSV 파일로 다운로드되었습니다.", Severity.Success);
     }
 
     private void FilterChanged(IEnumerable<string> _) => StateHasChanged();
     private void FilterChanged(KeyboardEventArgs _) => StateHasChanged();
-
     private void ResetFilters()
     {
         _searchQuery = "";
@@ -240,13 +264,12 @@
         StateHasChanged();
     }
 
-    
     private async Task OpenAddDialog()
     {
         var options = new DialogOptions { CloseOnEscapeKey = true, BackdropClick = false };
         var dialog = await DialogService.ShowAsync<AddSubDialog>("새 구독 추가", options);
         var result = await dialog.Result;
-
+        
         if (result != null && !result.Canceled)
         {
             Snackbar.Add("새 구독이 추가되었습니다.", Severity.Success);
