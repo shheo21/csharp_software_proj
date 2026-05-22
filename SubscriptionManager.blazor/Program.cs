@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using MudBlazor.Services;
@@ -19,14 +20,15 @@ public class Program
         });
 
         // 로그인 제공자 추가
-        /* builder.Services.AddScoped<CustomAuthStateProvider>();
-        builder.Services.AddScoped<AuthenticationStateProvider>(
-            sp => sp.GetRequiredService<CustomAuthStateProvider>());
-        builder.Services.AddScoped<IAuthService, AuthService>(); */
+        // builder.Services.AddScoped<CustomAuthStateProvider>();
+        // builder.Services.AddScoped<AuthenticationStateProvider>(
+        //     sp => sp.GetRequiredService<CustomAuthStateProvider>());
+        // builder.Services.AddScoped<IAuthService, AuthService>();
         builder.Services.AddAuthorizationCore();
 
         // API 서비스
         builder.Services.AddScoped<ISubscriptionApiService, SubscriptionApiService>();
+        builder.Services.AddScoped<ICategoryService, CategoryService>();
 
         // MudBlazor
         builder.Services.AddMudServices();
