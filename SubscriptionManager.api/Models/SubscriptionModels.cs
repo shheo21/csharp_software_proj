@@ -1,6 +1,6 @@
 namespace SubscriptionManager.api.Models;
 
-public class Subscription
+/*public class Subscription
 {
     public int Id { get; set; }
     public string UserId { get; set; } = string.Empty;
@@ -17,7 +17,7 @@ public class Subscription
 
     public ApplicationUser User { get; set; } = null!;
 }
-
+*/
 public class ExchangeRate
 {
     public int Id { get; set; }
