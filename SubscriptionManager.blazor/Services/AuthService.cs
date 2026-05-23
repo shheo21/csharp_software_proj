@@ -63,6 +63,25 @@ public class AuthService : IAuthService
 
     public async Task LogoutAsync()
     {
+        try
+        {
+            var user = await GetCurrentUserFromStorageAsync();
+            if (user != null && !string.IsNullOrWhiteSpace(user.RefreshToken))
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Post, "api/auth/logout")
+                {
+                    Content = JsonContent.Create(new RefreshRequest { RefreshToken = user.RefreshToken })
+                };
+                // 응답이 401 이어도 refresh 후 재시도할 의미가 없음 — 어차피 로컬은 정리됨
+                request.Options.Set(AuthHttpRequestOptions.SkipAuthRetry, true);
+                await _http.SendAsync(request);
+            }
+        }
+        catch
+        {
+            // 서버 통신 실패해도 로컬 정리는 계속 진행
+        }
+
         await _js.InvokeVoidAsync("localStorage.removeItem", TOKEN_KEY);
         await _js.InvokeVoidAsync("localStorage.removeItem", USER_KEY);
         _authStateProvider.NotifyAuthStateChanged();

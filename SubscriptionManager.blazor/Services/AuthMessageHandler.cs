@@ -60,15 +60,22 @@ public class AuthMessageHandler : DelegatingHandler
         }
     }
 
-    // 다른 요청이 이미 refresh 를 마쳤다면 새 토큰만 반환. 아직 안 했다면 직접 refresh 시도.
+    // 다른 요청이 이미 refresh를 마쳤다면 새 토큰만 반환. 아직 안 했다면 직접 refresh 시도.
     private async Task<string?> TryRefreshAsync(string? oldToken, CancellationToken ct)
     {
         await _refreshLock.WaitAsync(ct);
         try
         {
             var current = await ReadTokenAsync(ct);
+
+            // 다른 요청이 이미 새 토큰을 받아온 경우 — 그걸로 재시도
             if (!string.IsNullOrWhiteSpace(current) && current != oldToken)
                 return current;
+
+            // 이미 로그아웃 처리됨 (storage 비어 있음) — 추가 refresh/LogoutAsync 시도 금지.
+            // 후속 401 마다 LogoutAsync → NotifyAuthStateChanged 가 반복 트리거되는 무한 사이클을 차단.
+            if (string.IsNullOrWhiteSpace(current))
+                return null;
 
             var auth = _services.GetRequiredService<IAuthService>();
             var success = await auth.RefreshAsync();
