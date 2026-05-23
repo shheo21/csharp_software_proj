@@ -11,6 +11,7 @@ public interface IAuthService
     Task<(bool Success, string? Error)> RegisterAsync(RegisterRequest request);
     Task LogoutAsync();
     Task<UserInfo?> GetCurrentUserAsync();
+    Task<bool> RefreshAsync();
 }
 
 public class AuthService : IAuthService
@@ -67,18 +68,52 @@ public class AuthService : IAuthService
         _authStateProvider.NotifyAuthStateChanged();
     }
 
+    public async Task<bool> RefreshAsync()
+    {
+        try
+        {
+            var user = await GetCurrentUserFromStorageAsync();
+            if (user == null || string.IsNullOrWhiteSpace(user.RefreshToken)) return false;
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, "api/auth/refresh")
+            {
+                Content = JsonContent.Create(new RefreshRequest { RefreshToken = user.RefreshToken })
+            };
+            // 401 응답 시 무한 루프 방지 — refresh 요청 자체는 재시도하지 않음
+            request.Options.Set(AuthHttpRequestOptions.SkipAuthRetry, true);
+
+            var response = await _http.SendAsync(request);
+            if (!response.IsSuccessStatusCode) return false;
+
+            var auth = await response.Content.ReadFromJsonAsync<AuthResponse>();
+            if (auth == null) return false;
+
+            await SaveUserAsync(auth);
+            _authStateProvider.NotifyAuthStateChanged();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     public async Task<UserInfo?> GetCurrentUserAsync()
+    {
+        var user = await GetCurrentUserFromStorageAsync();
+        if (user == null || user.ExpiresAt < DateTime.UtcNow) return null;
+        return user;
+    }
+
+    private async Task<UserInfo?> GetCurrentUserFromStorageAsync()
     {
         try
         {
             var json = await _js.InvokeAsync<string?>("localStorage.getItem", USER_KEY);
             if (string.IsNullOrWhiteSpace(json)) return null;
 
-            var user = JsonSerializer.Deserialize<UserInfo>(json,
+            return JsonSerializer.Deserialize<UserInfo>(json,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (user == null || user.ExpiresAt < DateTime.UtcNow) return null;
-
-            return user;
         }
         catch { return null; }
     }

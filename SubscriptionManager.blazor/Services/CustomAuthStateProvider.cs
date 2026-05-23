@@ -8,11 +8,13 @@ namespace SubscriptionManager.blazor.Services;
 public class CustomAuthStateProvider : AuthenticationStateProvider
 {
     private readonly IJSRuntime _js;
+    private readonly IServiceProvider _services;
     private const string TOKEN_KEY = "subtrack_token";
 
-    public CustomAuthStateProvider(IJSRuntime js)
+    public CustomAuthStateProvider(IJSRuntime js, IServiceProvider services)
     {
         _js = js;
+        _services = services;
     }
 
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
@@ -23,13 +25,26 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
             if (string.IsNullOrWhiteSpace(token))
                 return Unauthenticated();
 
-            var claims = ParseJwtClaims(token);
-            if (claims == null || IsTokenExpired(token))
+            if (IsTokenExpired(token))
             {
-                await _js.InvokeVoidAsync("localStorage.removeItem", TOKEN_KEY);
-                await _js.InvokeVoidAsync("localStorage.removeItem", "subtrack_user");
-                return Unauthenticated();
+                // access token 만료 → refresh token 으로 한 번 시도
+                var auth = _services.GetRequiredService<IAuthService>();
+                if (await auth.RefreshAsync())
+                {
+                    token = await _js.InvokeAsync<string?>("localStorage.getItem", TOKEN_KEY);
+                    if (string.IsNullOrWhiteSpace(token) || IsTokenExpired(token))
+                        return Unauthenticated();
+                }
+                else
+                {
+                    await _js.InvokeVoidAsync("localStorage.removeItem", TOKEN_KEY);
+                    await _js.InvokeVoidAsync("localStorage.removeItem", "subtrack_user");
+                    return Unauthenticated();
+                }
             }
+
+            var claims = ParseJwtClaims(token);
+            if (claims == null) return Unauthenticated();
 
             var identity = new ClaimsIdentity(claims, "jwt");
             return new AuthenticationState(new ClaimsPrincipal(identity));
