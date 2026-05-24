@@ -499,3 +499,4 @@ AGENTS.md
 # Development files
 .vscode/
 .playwright-mcp/
+*.csproj.lscache

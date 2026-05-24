@@ -1,0 +1,181 @@
+@page "/login"
+@attribute [AllowAnonymous]
+@layout EmptyLayout
+@inject IAuthService AuthService
+@inject NavigationManager Nav
+
+<PageTitle>로그인 — SubTrack</PageTitle>
+
+<div class="auth-bg">
+    <div class="auth-card fade-in-up">
+        <div class="auth-logo">
+            <span style="color: var(--gold-400); font-size: 2rem;">✦</span>
+            <span class="auth-brand">SubTrack</span>
+        </div>
+        <div class="auth-subtitle">구독을 스마트하게 관리하세요</div>
+
+        <MudForm @ref="_form" Class="mt-6">
+            <MudTextField @bind-Value="_email"
+                          Label="이메일"
+                          InputType="InputType.Email"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Class="mb-3"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Email"
+                          Required="true"
+                          RequiredError="이메일을 입력하세요"
+                          Style="background:rgba(255,255,255,0.03);" />
+
+            <MudTextField @bind-Value="_password"
+                          Label="비밀번호"
+                          InputType="@_pwdType"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Class="mb-4"
+                          Adornment="Adornment.End"
+                          AdornmentIcon="@_pwdIcon"
+                          OnAdornmentClick="TogglePassword"
+                          Required="true"
+                          RequiredError="비밀번호를 입력하세요"
+                          Immediate="true"
+                          Style="background:rgba(255,255,255,0.03);"
+                          OnKeyDown="OnKeyDown" />
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <div class="auth-error mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Small" Class="mr-1" />
+                    @_error
+                </div>
+            }
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       FullWidth="true" Size="Size.Large"
+                       Disabled="_loading" OnClick="HandleLogin"
+                       Style="border-radius:12px; font-weight:700; height:48px; font-size:1rem;">
+                @if (_loading)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    <span>로그인 중...</span>
+                }
+                else { <span>로그인</span> }
+            </MudButton>
+        </MudForm>
+
+        <div class="auth-divider my-5"><span>또는</span></div>
+
+        <div class="text-center">
+            <MudText Typo="Typo.body2" Style="color: var(--text-secondary);">
+                계정이 없으신가요?
+                <MudLink Href="/register" Style="color: var(--gold-400); font-weight:600; text-decoration:none;">
+                    회원가입
+                </MudLink>
+            </MudText>
+        </div>
+    </div>
+</div>
+
+<style>
+    .auth-bg {
+        min-height: 100vh;
+        display: flex; align-items: center; justify-content: center;
+        padding: 24px;
+    }
+    .auth-card {
+        width: 100%; max-width: 420px;
+        background: rgba(15,15,27,0.85);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--border-subtle);
+        border-radius: 24px;
+        padding: 40px;
+    }
+    .auth-logo {
+        display: flex; align-items: center; justify-content: center;
+        gap: 10px; margin-bottom: 8px;
+    }
+    .auth-brand { font-size: 1.8rem; font-weight: 800; color: var(--text-primary); letter-spacing: 0.05em; }
+    .auth-subtitle { text-align: center; color: var(--text-secondary); font-size: 0.9rem; }
+    .auth-error {
+        background: rgba(255,71,87,0.1); border: 1px solid rgba(255,71,87,0.3);
+        border-radius: 10px; padding: 10px 14px;
+        color: var(--accent-red); font-size: 0.85rem;
+        display: flex; align-items: center;
+    }
+    .auth-divider { position: relative; text-align: center; }
+    .auth-divider::before {
+        content: ''; position: absolute; top: 50%; left: 0; right: 0;
+        height: 1px; background: var(--border-subtle);
+    }
+    .auth-divider span {
+        position: relative; background: rgba(15,15,27,0.85);
+        padding: 0 12px; color: var(--text-secondary); font-size: 0.82rem;
+    }
+</style>
+
+@code {
+    private MudForm? _form;
+    private string _email = "";
+    private string _password = "";
+    private string _error = "";
+    private bool _loading = false;
+    private InputType _pwdType = InputType.Password;
+    private string _pwdIcon = Icons.Material.Filled.VisibilityOff;
+
+    private void TogglePassword()
+    {
+        if (_pwdType == InputType.Password)
+        {
+            _pwdType = InputType.Text;
+            _pwdIcon = Icons.Material.Filled.Visibility;
+        }
+        else
+        {
+            _pwdType = InputType.Password;
+            _pwdIcon = Icons.Material.Filled.VisibilityOff;
+        }
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await HandleLogin();
+    }
+
+    private async Task HandleLogin()
+    {
+        _error = "";
+        if (string.IsNullOrWhiteSpace(_email) || string.IsNullOrWhiteSpace(_password))
+        {
+            _error = "이메일과 비밀번호를 입력해주세요.";
+            return;
+        }
+
+        _loading = true;
+        var (success, error) = await AuthService.LoginAsync(new LoginRequest
+        {
+            Email = _email,
+            Password = _password
+        });
+        _loading = false;
+
+        if (success)
+        {
+            var target = ResolveReturnUrl();
+            Nav.NavigateTo(target, forceLoad: true);
+        }
+        else
+            _error = error ?? "로그인에 실패했습니다.";
+    }
+
+    private string ResolveReturnUrl()
+    {
+        var uri = new Uri(Nav.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var raw = query["returnUrl"];
+        if (string.IsNullOrWhiteSpace(raw)) return "/dashboard";
+
+        // 절대 URL/스킴 주입 차단 — 상대 경로만 허용
+        if (raw.Contains("://") || raw.StartsWith("//")) return "/dashboard";
+        return raw.StartsWith("/") ? raw : "/" + raw;
+    }
+}

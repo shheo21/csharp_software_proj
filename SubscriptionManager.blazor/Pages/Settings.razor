@@ -1,7 +1,6 @@
 @page "/settings"
-@using System.ComponentModel.DataAnnotations
-@* TODO(auth-branch): IAuthService 가 auth 브랜치로 이동, 머지 시 아래 주석 복원 *@
-@* @inject IAuthService AuthService *@
+@attribute [Authorize]
+@inject IAuthService AuthService
 @inject ICategoryService CategoryService
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
@@ -238,19 +237,17 @@
         CategoryService.OnChange -= OnCategoriesChanged;
     }
 
-    private Task LoadProfileAsync()
+    private async Task LoadProfileAsync()
     {
-        // TODO(auth-branch): auth 브랜치 머지 후 아래 주석 복원
-        // var user = await AuthService.GetCurrentUserAsync();
-        // if (user != null)
-        // {
-        //     _displayName = user.Username;
-        //     _email = user.Email;
-        //     _initial = !string.IsNullOrWhiteSpace(user.Username)
-        //         ? user.Username.Substring(0, 1).ToUpperInvariant()
-        //         : "U";
-        // }
-        return Task.CompletedTask;
+        var user = await AuthService.GetCurrentUserAsync();
+        if (user != null)
+        {
+            _displayName = user.DisplayName;
+            _email = user.Email;
+            _initial = !string.IsNullOrWhiteSpace(user.DisplayName)
+                ? user.DisplayName.Substring(0, 1).ToUpperInvariant()
+                : "U";
+        }
     }
 
     private async Task LoadNotificationsAsync()

@@ -1,5 +1,7 @@
 @page "/subscriptions"
+@attribute [Authorize]
 @inject ISubscriptionApiService ApiService
+@inject ICategoryService CategoryService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
