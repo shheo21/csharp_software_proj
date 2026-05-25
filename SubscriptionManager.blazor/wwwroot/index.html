@@ -15,6 +15,23 @@
     <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
     <script type="importmap"></script>
+    <script>
+        // FOUC 방지: WASM 부트 전에 설정 테마로 반영
+        (function () {
+            try {
+                var stored = localStorage.getItem('subtrack_theme');
+                var isDark;
+                if (stored === 'Light') isDark = false;
+                else if (stored === 'Dark') isDark = true;
+                else isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+            } catch (e) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+    </script>
+    <script src="js/theme.js"></script>
+    <script src="js/theme-switcher.js"></script>
 </head>
 
 <body>

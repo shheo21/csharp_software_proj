@@ -23,7 +23,7 @@
                           Adornment="Adornment.Start"
                           AdornmentIcon="@Icons.Material.Filled.Person"
                           Required="true"
-                          Style="background:rgba(255,255,255,0.03);" />
+                          Style="background: var(--input-bg);" />
 
             <MudTextField @bind-Value="_email"
                           Label="이메일"
@@ -35,7 +35,7 @@
                           
                           AdornmentIcon="@Icons.Material.Filled.Email"
                           Required="true"
-                          Style="background:rgba(255,255,255,0.03);" />
+                          Style="background: var(--input-bg);" />
 
             <MudTextField @bind-Value="_password"
                           Label="비밀번호 (6자 이상)"
@@ -47,7 +47,7 @@
                           AdornmentIcon="@_pwdIcon"
                           OnAdornmentClick="TogglePassword"
                           Required="true"
-                          Style="background:rgba(255,255,255,0.03);" />
+                          Style="background: var(--input-bg);" />
 
             <MudTextField @bind-Value="_confirmPassword"
                           Label="비밀번호 확인"
@@ -58,7 +58,7 @@
                           Adornment="Adornment.Start"
                           AdornmentIcon="@Icons.Material.Filled.Lock"
                           Required="true"
-                          Style="background:rgba(255,255,255,0.03);" />
+                          Style="background: var(--input-bg);" />
 
             @if (!string.IsNullOrEmpty(_error))
             {
@@ -110,7 +110,7 @@
     }
     .auth-card {
         width: 100%; max-width: 420px;
-        background: rgba(15,15,27,0.85);
+        background: var(--surface-elevated);
         backdrop-filter: blur(20px);
         border: 1px solid var(--border-subtle);
         border-radius: 24px;
@@ -140,7 +140,7 @@
         height: 1px; background: var(--border-subtle);
     }
     .auth-divider span {
-        position: relative; background: rgba(15,15,27,0.85);
+        position: relative; background: var(--surface-elevated);
         padding: 0 12px; color: var(--text-secondary); font-size: 0.82rem;
     }
 </style>

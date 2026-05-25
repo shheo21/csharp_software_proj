@@ -1,7 +1,39 @@
 @inherits LayoutComponentBase
+@using SubscriptionManager.blazor.Services
+@using SubscriptionManager.blazor.Components
+@implements IDisposable
+@inject IThemeService Theme
 
-<MudThemeProvider IsDarkMode="true" />
+<MudThemeProvider IsDarkMode="@Theme.IsDark" />
 <MudSnackbarProvider />
 <MudPopoverProvider />
 
+<div class="theme-switcher-floating">
+    <ThemeSwitcher />
+</div>
+
 @Body
+
+<style>
+    .theme-switcher-floating {
+        position: fixed;
+        top: 20px;
+        right: 24px;
+        z-index: 1000;
+    }
+</style>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await Theme.InitializeAsync();
+        Theme.OnChange += OnThemeChanged;
+    }
+
+    private void OnThemeChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Theme.OnChange -= OnThemeChanged;
+    }
+}
