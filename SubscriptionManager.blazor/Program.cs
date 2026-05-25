@@ -36,6 +36,9 @@ public class Program
         builder.Services.AddScoped<ISubscriptionApiService, SubscriptionApiService>();
         builder.Services.AddScoped<ICategoryService, CategoryService>();
 
+        // 테마 (라이트/다크/시스템)
+        builder.Services.AddScoped<IThemeService, ThemeService>();
+
         // MudBlazor
         builder.Services.AddMudServices();
 

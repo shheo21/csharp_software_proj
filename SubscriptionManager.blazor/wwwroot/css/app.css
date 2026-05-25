@@ -1,7 +1,8 @@
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
 
-/* ── CSS Variables ── */
-:root {
+/* ── CSS Variables (Dark = default) ── */
+:root,
+:root[data-theme="dark"] {
     --navy-950: #07070e;
     --navy-900: #0c0c18;
     --navy-800: #0f0f1b;
@@ -17,6 +18,29 @@
     --text-primary: #e8ecf4;
     --text-secondary: #8892a4;
     --border-subtle: rgba(99,102,241,0.15);
+    --surface-elevated: rgba(15,22,40,0.7);
+    --surface-overlay: rgba(10,14,26,0.92);
+    --input-bg: rgba(255,255,255,0.03);
+    --backdrop-grad-1: rgba(99,102,241,0.10);
+    --backdrop-grad-2: rgba(56,189,248,0.05);
+}
+
+/* ── Light theme overrides ── */
+:root[data-theme="light"] {
+    --navy-950: #f6f7fb;   /* page background */
+    --navy-900: #eef1f7;
+    --navy-800: #ffffff;   /* card/dialog surface */
+    --navy-700: #e7eaf2;
+    --navy-600: #d4d9e4;
+    /* gold/accent 브랜드 컬러는 동일하게 유지 */
+    --text-primary: #1a1d29;
+    --text-secondary: #5a6478;
+    --border-subtle: rgba(99,102,241,0.20);
+    --surface-elevated: rgba(255,255,255,0.85);
+    --surface-overlay: rgba(255,255,255,0.92);
+    --input-bg: rgba(0,0,0,0.03);
+    --backdrop-grad-1: rgba(99,102,241,0.08);
+    --backdrop-grad-2: rgba(56,189,248,0.06);
 }
 
 /* ── Base ── */
@@ -27,10 +51,12 @@
 body, html {
     background: var(--navy-950) !important;
     background-image:
-        radial-gradient(ellipse 80% 50% at 20% -10%, rgba(99,102,241,0.10) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 40% at 80% 110%, rgba(56,189,248,0.05) 0%, transparent 60%);
+        radial-gradient(ellipse 80% 50% at 20% -10%, var(--backdrop-grad-1) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 110%, var(--backdrop-grad-2) 0%, transparent 60%);
     min-height: 100vh;
     margin: 0;
+    color: var(--text-primary);
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* ── Blazor error / loading ── */
@@ -75,16 +101,69 @@ body, html {
 
 /* AppBar */
 .app-bar-custom {
-    background: rgba(10,14,26,0.92) !important;
+    background: var(--surface-overlay) !important;
     backdrop-filter: blur(20px) !important;
     border-bottom: 1px solid var(--border-subtle) !important;
+    color: var(--text-primary) !important;
+}
+/* 테마와 무관하게 AppBar 안의 텍스트/아이콘이 항상 보이도록 강제 */
+.app-bar-custom .mud-typography,
+.app-bar-custom .mud-icon-root,
+.app-bar-custom .mud-icon-button,
+.app-bar-custom .mud-button-root {
+    color: var(--text-primary) !important;
 }
 .app-title { letter-spacing: 0.08em; font-weight: 700; }
 .gold-text { color: var(--gold-500) !important; }
 
+/* ── Theme switcher (segmented control) ── */
+.theme-switcher {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    padding: 3px;
+    user-select: none;
+    touch-action: none;
+}
+.theme-switcher-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 36px;
+    height: 30px;
+    border-radius: 999px;
+    background: var(--gold-500);
+    box-shadow: 0 2px 8px rgba(99,102,241,0.35);
+    transition: transform 0.22s cubic-bezier(.4,.0,.2,1);
+    pointer-events: none;
+    z-index: 0;
+}
+.theme-opt {
+    position: relative;
+    z-index: 1;
+    width: 36px;
+    height: 30px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: color 0.18s ease;
+}
+.theme-opt:hover { color: var(--text-primary); }
+.theme-opt.active { color: #ffffff; }
+.theme-opt:focus { outline: none; }
+.theme-opt:focus-visible { outline: 2px solid var(--gold-400); outline-offset: 2px; }
+
 /* Drawer */
 .drawer-custom {
-    background: rgba(10,14,26,0.95) !important;
+    background: var(--surface-overlay) !important;
     border-right: 1px solid var(--border-subtle) !important;
 }
 .nav-item-custom { border-radius: 12px !important; margin: 2px 8px !important; }
@@ -103,7 +182,7 @@ body, html {
 
 /* ── Cards ── */
 .glass-card {
-    background: rgba(15,22,40,0.7) !important;
+    background: var(--surface-elevated) !important;
     backdrop-filter: blur(16px) !important;
     border: 1px solid var(--border-subtle) !important;
     border-radius: 16px !important;
@@ -115,7 +194,7 @@ body, html {
 }
 
 .stat-card {
-    background: linear-gradient(135deg, rgba(15,15,27,0.9), rgba(22,22,40,0.7)) !important;
+    background: var(--surface-elevated) !important;
     border: 1px solid var(--border-subtle) !important;
     border-radius: 16px !important;
 }

@@ -25,7 +25,7 @@
                           AdornmentIcon="@Icons.Material.Filled.Email"
                           Required="true"
                           RequiredError="이메일을 입력하세요"
-                          Style="background:rgba(255,255,255,0.03);" />
+                          Style="background: var(--input-bg);" />
 
             <MudTextField @bind-Value="_password"
                           Label="비밀번호"
@@ -39,7 +39,7 @@
                           Required="true"
                           RequiredError="비밀번호를 입력하세요"
                           Immediate="true"
-                          Style="background:rgba(255,255,255,0.03);"
+                          Style="background: var(--input-bg);"
                           OnKeyDown="OnKeyDown" />
 
             @if (!string.IsNullOrEmpty(_error))
@@ -84,7 +84,7 @@
     }
     .auth-card {
         width: 100%; max-width: 420px;
-        background: rgba(15,15,27,0.85);
+        background: var(--surface-elevated);
         backdrop-filter: blur(20px);
         border: 1px solid var(--border-subtle);
         border-radius: 24px;
@@ -108,7 +108,7 @@
         height: 1px; background: var(--border-subtle);
     }
     .auth-divider span {
-        position: relative; background: rgba(15,15,27,0.85);
+        position: relative; background: var(--surface-elevated);
         padding: 0 12px; color: var(--text-secondary); font-size: 0.82rem;
     }
 </style>
