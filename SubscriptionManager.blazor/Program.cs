@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using MudBlazor.Services;
@@ -13,20 +14,30 @@ public class Program
         builder.RootComponents.Add<App>("#app");
         builder.RootComponents.Add<HeadOutlet>("head::after");
 
-        builder.Services.AddScoped(sp => new HttpClient
+        builder.Services.AddScoped<AuthMessageHandler>();
+        builder.Services.AddScoped(sp =>
         {
-            BaseAddress = new Uri("https://localhost:7188")
+            var authHandler = sp.GetRequiredService<AuthMessageHandler>();
+            authHandler.InnerHandler = new HttpClientHandler();
+            return new HttpClient(authHandler)
+            {
+                BaseAddress = new Uri("https://localhost:7188")
+            };
         });
 
         // 로그인 제공자 추가
-        /* builder.Services.AddScoped<CustomAuthStateProvider>();
+        builder.Services.AddScoped<CustomAuthStateProvider>();
         builder.Services.AddScoped<AuthenticationStateProvider>(
             sp => sp.GetRequiredService<CustomAuthStateProvider>());
-        builder.Services.AddScoped<IAuthService, AuthService>(); */
+        builder.Services.AddScoped<IAuthService, AuthService>();
         builder.Services.AddAuthorizationCore();
 
         // API 서비스
         builder.Services.AddScoped<ISubscriptionApiService, SubscriptionApiService>();
+        builder.Services.AddScoped<ICategoryService, CategoryService>();
+
+        // 테마 (라이트/다크/시스템)
+        builder.Services.AddScoped<IThemeService, ThemeService>();
 
         // MudBlazor
         builder.Services.AddMudServices();
