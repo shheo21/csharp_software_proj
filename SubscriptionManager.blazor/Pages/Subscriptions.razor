@@ -112,62 +112,114 @@
     }
     else
     {
-        <div class="glass-card fade-in-up fade-in-up-3" style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; min-width: 950px;">
-                <thead>
-                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.08); color: var(--text-secondary); font-size: 0.85rem;">
-                        <th style="padding: 16px 24px; text-align: left; font-weight: 500;">서비스</th>
-                        <th style="padding: 16px 8px; text-align: center; font-weight: 500;">카테고리</th>
-                        <th style="padding: 16px 8px; text-align: left; font-weight: 500;">결제 금액</th>
-                        <th style="padding: 16px 8px; text-align: left; font-weight: 500;">원화 환산</th>
-                        <th style="padding: 16px 8px; text-align: center; font-weight: 500;">주기</th>
-                        <th style="padding: 16px 8px; text-align: center; font-weight: 500;">다음 결제일</th>
-                        <th style="padding: 16px 8px; text-align: center; font-weight: 500;">D-DAY</th>
-                        <th style="padding: 16px 8px; text-align: center; font-weight: 500;">상태</th>
-                        <th style="padding: 16px 24px; text-align: right; font-weight: 500;">관리</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var sub in FilteredSubscriptions)
-                    {
-                        <tr class="table-row-hover" style="border-bottom: 1px solid rgba(255,255,255,0.04); transition: background-color 0.2s;">
-                            <td style="padding: 16px 24px;">
-                                <div class="d-flex align-center">
-                                    <div style="background: rgba(255,255,255,0.05); border-radius: 10px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; margin-right: 16px;">
-                                        @(sub.IconEmoji ?? "📦")
-                                    </div>
-                                    <div style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem;">@sub.Name</div>
-                                </div>
-                            </td>
-                            <td style="padding: 16px 8px; text-align: center;">
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Style="@GetCategoryChipStyle(sub.Category)">@sub.Category</MudChip>
-                            </td>
-                            <td style="padding: 16px 8px; text-align: left;">
-                                <div style="font-weight: 800; color: var(--text-primary); font-size: 0.95rem;">@(sub.Currency == "KRW" ? "₩" : "$")@sub.Amount.ToString("N2")</div>
-                                <div style="font-size: 0.75rem; color: var(--text-secondary);">@sub.Currency</div>
-                            </td>
-                            <td style="padding: 16px 8px; text-align: left;">
-                                <div style="font-weight: 800; color: var(--accent-blue); font-size: 0.95rem;">₩@sub.AmountInKRW.ToString("N0")</div>
-                            </td>
-                            <td style="padding: 16px 8px; text-align: center;">
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Style="color: #52c41a; border-color: rgba(82,196,26,0.5); background: rgba(82,196,26,0.05);">@(sub.BillingCycle == "MONTHLY" ? "월간" : "연간")</MudChip>
-                            </td>
-                            <td style="padding: 16px 8px; text-align: center; color: var(--text-primary); font-weight: 500; font-size: 0.9rem;">@sub.NextBillingDate.ToString("yyyy.MM.dd")</td>
-                            <td style="padding: 16px 8px; text-align: center;">
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Style="@GetDDayChipStyle(sub.DaysUntilBilling)">D-@sub.DaysUntilBilling</MudChip>
-                            </td>
-                            <td style="padding: 16px 8px; text-align: center;">
-                                <MudSwitch @bind-Value="sub.IsActive" Color="Color.Primary" Class="custom-purple-toggle mx-auto" Style="margin-left: 12px;" />
-                            </td>
-                            <td style="padding: 16px 24px; text-align: right;">
-                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" OnClick="@(() => OpenEditDialog(sub))" />
-                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteSubscription(sub))" />
-                            </td>
+        @if (_viewMode == "list")
+        {
+            <div class="glass-card fade-in-up fade-in-up-3" style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; min-width: 950px;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.08); color: var(--text-secondary); font-size: 0.85rem;">
+                            <th style="padding: 16px 24px; text-align: left; font-weight: 500;">서비스</th>
+                            <th style="padding: 16px 8px; text-align: center; font-weight: 500;">카테고리</th>
+                            <th style="padding: 16px 8px; text-align: left; font-weight: 500;">결제 금액</th>
+                            <th style="padding: 16px 8px; text-align: left; font-weight: 500;">원화 환산</th>
+                            <th style="padding: 16px 8px; text-align: center; font-weight: 500;">주기</th>
+                            <th style="padding: 16px 8px; text-align: center; font-weight: 500;">다음 결제일</th>
+                            <th style="padding: 16px 8px; text-align: center; font-weight: 500;">D-DAY</th>
+                            <th style="padding: 16px 8px; text-align: center; font-weight: 500;">상태</th>
+                            <th style="padding: 16px 24px; text-align: right; font-weight: 500;">관리</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+                    </thead>
+                    <tbody>
+                        @foreach (var sub in FilteredSubscriptions)
+                        {
+                            <tr class="table-row-hover" style="border-bottom: 1px solid rgba(255,255,255,0.04); transition: background-color 0.2s;">
+                                <td style="padding: 16px 24px;">
+                                    <div class="d-flex align-center">
+                                        <div style="background: rgba(255,255,255,0.05); border-radius: 10px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; margin-right: 16px;">
+                                            @(sub.IconEmoji ?? "📦")
+                                        </div>
+                                        <div style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem;">@sub.Name</div>
+                                    </div>
+                                </td>
+                                <td style="padding: 16px 8px; text-align: center;">
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Style="@GetCategoryChipStyle(sub.Category)">@sub.Category</MudChip>
+                                </td>
+                                <td style="padding: 16px 8px; text-align: left;">
+                                    <div style="font-weight: 800; color: var(--text-primary); font-size: 0.95rem;">@(sub.Currency == "KRW" ? "₩" : "$")@sub.Amount.ToString("N2")</div>
+                                    <div style="font-size: 0.75rem; color: var(--text-secondary);">@sub.Currency</div>
+                                </td>
+                                <td style="padding: 16px 8px; text-align: left;">
+                                    <div style="font-weight: 800; color: var(--accent-blue); font-size: 0.95rem;">₩@sub.AmountInKRW.ToString("N0")</div>
+                                </td>
+                                <td style="padding: 16px 8px; text-align: center;">
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Style="color: #52c41a; border-color: rgba(82,196,26,0.5); background: rgba(82,196,26,0.05);">@(sub.BillingCycle == "MONTHLY" ? "월간" : "연간")</MudChip>
+                                </td>
+                                <td style="padding: 16px 8px; text-align: center; color: var(--text-primary); font-weight: 500; font-size: 0.9rem;">@sub.NextBillingDate.ToString("yyyy.MM.dd")</td>
+                                <td style="padding: 16px 8px; text-align: center;">
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Style="@GetDDayChipStyle(sub.DaysUntilBilling)">D-@sub.DaysUntilBilling</MudChip>
+                                </td>
+                                <td style="padding: 16px 8px; text-align: center;">
+                                    <MudSwitch @bind-Value="sub.IsActive" Color="Color.Primary" Class="custom-purple-toggle mx-auto" Style="margin-left: 12px;" />
+                                </td>
+                                <td style="padding: 16px 24px; text-align: right;">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" OnClick="@(() => OpenEditDialog(sub))" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteSubscription(sub))" />
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <MudGrid Spacing="3" Class="fade-in-up fade-in-up-3">
+                @foreach (var sub in FilteredSubscriptions)
+                {
+                    <MudItem xs="12" sm="6" md="4" lg="3">
+                        <div class="glass-card pa-4 d-flex flex-column" style="height: 100%; position: relative;">
+                            
+                            <div class="d-flex align-center mb-3">
+                                <div style="background: rgba(255,255,255,0.05); border-radius: 10px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; margin-right: 12px;">
+                                    @(sub.IconEmoji ?? "📦")
+                                </div>
+                                <div style="flex-grow: 1; overflow: hidden;">
+                                    <div style="font-weight: 700; color: var(--text-primary); font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@sub.Name</div>
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Style="@(GetCategoryChipStyle(sub.Category) + "margin: 4px 0 0 0; padding: 0 6px; font-size: 0.7rem;")">@sub.Category</MudChip>
+                                </div>
+                                <div>
+                                    <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Color="Color.Secondary">
+                                        <MudMenuItem OnClick="@(() => OpenEditDialog(sub))">수정</MudMenuItem>
+                                        <MudMenuItem OnClick="@(() => DeleteSubscription(sub))"><span style="color:var(--accent-red);">삭제</span></MudMenuItem>
+                                    </MudMenu>
+                                </div>
+                            </div>
+                            
+                            <MudDivider Style="background-color: rgba(255,255,255,0.08); margin: 8px 0 16px 0;" />
+
+                            <div class="mb-4">
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">결제 금액 (@(sub.BillingCycle == "MONTHLY" ? "월간" : "연간"))</div>
+                                <div style="font-weight: 800; color: var(--accent-blue); font-size: 1.4rem;">
+                                    ₩@sub.AmountInKRW.ToString("N0")
+                                </div>
+                                @if(sub.Currency != "KRW") {
+                                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px;">(@(sub.Currency == "USD" ? "$" : sub.Currency)@sub.Amount.ToString("N2"))</div>
+                                }
+                            </div>
+
+                            <div class="mt-auto d-flex align-center justify-space-between" style="background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 10px;">
+                                <div class="d-flex align-center">
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Style="@GetDDayChipStyle(sub.DaysUntilBilling)">D-@sub.DaysUntilBilling</MudChip>
+                                    <span style="font-size: 0.8rem; font-weight: 500; color: var(--text-secondary); margin-left: 8px;">@sub.NextBillingDate.ToString("MM.dd")</span>
+                                </div>
+                                <MudSwitch @bind-Value="sub.IsActive" Color="Color.Primary" Class="custom-purple-toggle" Style="margin: 0;" />
+                            </div>
+                            
+                        </div>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
     }
 </div>
 
@@ -188,6 +240,9 @@
     private string _filterCategory = "전체";
     private string _filterCurrency = "전체";
     private string _filterCycle = "전체";
+    
+    // 화면 표시 방식 저장 변수
+    private string _viewMode = "list"; 
 
     private IEnumerable<SubscriptionDto> FilteredSubscriptions => _subscriptions.Where(s =>
         (string.IsNullOrWhiteSpace(_searchQuery) || 
@@ -220,10 +275,16 @@
 
         var base64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(sb.ToString()));
         await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "text/csv;charset=utf-8;", base64);
+
         Snackbar.Add($"'{fileName}' 다운로드 시작!", Severity.Success);
     }
 
-    protected override async Task OnInitializedAsync() => await LoadData();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _viewMode = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "subtrack_view_mode") ?? "list";
+        await LoadData();
+    }
 
     private async Task LoadData()
     {
@@ -235,6 +296,7 @@
 
     private void FilterChanged(IEnumerable<string> _) => StateHasChanged();
     private void FilterChanged(KeyboardEventArgs _) => StateHasChanged();
+    
     private void ResetFilters() { _searchQuery = ""; _filterCategory = "전체"; _filterCurrency = "전체"; _filterCycle = "전체"; StateHasChanged(); }
 
     private async Task OpenAddDialog()
@@ -242,13 +304,19 @@
         var options = new DialogOptions { CloseOnEscapeKey = true, BackdropClick = false };
         var dialog = await DialogService.ShowAsync<AddSubDialog>("새 구독 추가", options);
         var result = await dialog.Result;
+        
         if (result != null && !result.Canceled) { Snackbar.Add("새 구독이 추가되었습니다.", Severity.Success); await LoadData(); }
     }
 
     private async Task OpenEditDialog(SubscriptionDto sub) => Snackbar.Add($"{sub.Name} 수정 창 열림 (구현 예정)", Severity.Info);
+    
     private void ToggleStatus(SubscriptionDto sub) { sub.IsActive = !sub.IsActive; Snackbar.Add(sub.IsActive ? $"{sub.Name} 활성화 됨" : $"{sub.Name} 해지 처리됨", sub.IsActive ? Severity.Success : Severity.Warning); }
+    
     private void DeleteSubscription(SubscriptionDto sub) { _subscriptions.Remove(sub); Snackbar.Add($"{sub.Name} 삭제됨", Severity.Error); }
+    
     private string GetCategoryChipStyle(string category) => category switch { "엔터테인먼트" => "color: #ff4d4f; border-color: rgba(255,77,79,0.5); background: rgba(255,77,79,0.05);", "창작 도구" => "color: #ff75c3; border-color: rgba(255,117,195,0.5); background: rgba(255,117,195,0.05);", "음악" => "color: #b37feb; border-color: rgba(179,127,235,0.5); background: rgba(179,127,235,0.05);", "개발 도구" => "color: #69c0ff; border-color: rgba(105,192,255,0.5); background: rgba(105,192,255,0.05);", _ => "color: var(--text-secondary); border-color: rgba(255,255,255,0.2);" };
+    
     private string GetDDayChipStyle(int days) => days <= 3 ? "color: #ff4d4f; border-color: rgba(255,77,79,0.5); background: rgba(255,77,79,0.05);" : days <= 7 ? "color: #faad14; border-color: rgba(250,173,20,0.5); background: rgba(250,173,20,0.05);" : "color: #52c41a; border-color: rgba(82,196,26,0.5); background: rgba(82,196,26,0.05);";
+    
     private List<SubscriptionDto> GetMockSubscriptions() => new() { new() { Id=1, Name="Netflix", Category="엔터테인먼트", Currency="KRW", Amount=17000, AmountInKRW=17000, MonthlyAmountInKRW=17000, BillingCycle="MONTHLY", NextBillingDate=DateTime.Now.AddDays(5), DaysUntilBilling=5, IconEmoji="🎬", IsActive=true }, new() { Id=2, Name="Adobe Creative Cloud", Category="창작 도구", Currency="USD", Amount=54.99m, AmountInKRW=75886, MonthlyAmountInKRW=75886, BillingCycle="MONTHLY", NextBillingDate=DateTime.Now.AddDays(12), DaysUntilBilling=12, IconEmoji="🎨", IsActive=true }, new() { Id=3, Name="CLIP STUDIO PAINT", Category="창작 도구", Currency="KRW", Amount=4800, AmountInKRW=4800, MonthlyAmountInKRW=400, BillingCycle="YEARLY", NextBillingDate=DateTime.Now.AddDays(45), DaysUntilBilling=45, IconEmoji="✏️", IsActive=true }, new() { Id=4, Name="Spotify", Category="음악", Currency="USD", Amount=10.99m, AmountInKRW=15166, MonthlyAmountInKRW=15166, BillingCycle="MONTHLY", NextBillingDate=DateTime.Now.AddDays(3), DaysUntilBilling=3, IconEmoji="🎵", IsActive=true }, new() { Id=5, Name="GitHub Copilot", Category="개발 도구", Currency="USD", Amount=10m, AmountInKRW=13800, MonthlyAmountInKRW=13800, BillingCycle="MONTHLY", NextBillingDate=DateTime.Now.AddDays(20), DaysUntilBilling=20, IconEmoji="💻", IsActive=true } };
 }
