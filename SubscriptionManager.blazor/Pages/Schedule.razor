@@ -10,7 +10,7 @@
     <div class="d-flex align-center justify-space-between mb-6">
         <div>
             <div class="page-title">구독 일정</div>
-            <div class="page-subtitle">이번 달 결제 예정인 구독 서비스를 확인하세요</div>
+            <div class="page-subtitle">결제 예정인 구독 서비스를 확인하세요</div>
         </div>
     </div>
 
@@ -233,7 +233,7 @@
         line-height: 8px;
     }
     
-    
+    /* input type=color 커스텀 (크롬/사파리 대응) */
     input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
     input[type="color"]::-webkit-color-swatch { border: 2px solid rgba(255,255,255,0.2); border-radius: 8px; }
 </style>
@@ -326,7 +326,7 @@
     {
         if (_categoryColors.TryGetValue(category, out var savedColor)) return savedColor;
         if (_defaultColors.TryGetValue(category, out var defaultColor)) return defaultColor;
-        return "#ffffff"; 
+        return "#ffffff"; // 기본 흰색
     }
 
     // 캘린더 생성 로직
@@ -370,10 +370,46 @@
         _selectedDate = date;
     }
 
+    // 1. 선택한 날짜에 결제 예정인 구독을 찾는 메서드
     private List<SubscriptionDto> GetSubscriptionsForDate(DateTime date)
     {
-        
-        return _subscriptions.Where(s => s.NextBillingDate.Day == date.Day && s.IsActive).ToList();
+        // IsBillingDate 메서드를 통해 이 구독이 '매월/매년' 반복되는 주기에 맞는지 검사
+        return _subscriptions.Where(s => s.IsActive && IsBillingDate(s, date)).ToList();
+    }
+
+    // 2. 달력의 특정 날짜가 이 구독의 진짜 '결제 갱신일'인지 계산하는 똑똑한 로직
+    private bool IsBillingDate(SubscriptionDto sub, DateTime targetDate)
+    {
+        // 1) 월간(MONTHLY) 결제인 경우 - 매달 같은 '일(Day)'에 표시
+        if (sub.BillingCycle == "MONTHLY" || sub.BillingCycle == "Monthly")
+        {
+            int billingDay = sub.NextBillingDate.Day;
+            int daysInTargetMonth = DateTime.DaysInMonth(targetDate.Year, targetDate.Month);
+            
+            // 말일 보정: 결제일이 31일인데, 이번 달이 30일(또는 28일)까지밖에 없다면 말일로 조정
+            if (billingDay > daysInTargetMonth)
+            {
+                billingDay = daysInTargetMonth; 
+            }
+
+            return targetDate.Day == billingDay;
+        }
+        // 2) 연간(YEARLY) 결제인 경우 - 매년 같은 '월(Month)'과 '일(Day)'에 표시
+        else if (sub.BillingCycle == "YEARLY" || sub.BillingCycle == "Yearly")
+        {
+            int billingMonth = sub.NextBillingDate.Month;
+            int billingDay = sub.NextBillingDate.Day;
+
+            // 윤년 보정: 결제일이 2월 29일인데, 올해가 윤년이 아니라면 28일로 조정
+            if (billingMonth == 2 && billingDay == 29 && !DateTime.IsLeapYear(targetDate.Year))
+            {
+                billingDay = 28;
+            }
+
+            return targetDate.Month == billingMonth && targetDate.Day == billingDay;
+        }
+
+        return false;
     }
 
     private class CalendarCell
@@ -388,7 +424,7 @@
         var now = DateTime.Today;
         return new List<SubscriptionDto> 
         { 
-            new() { Name="Netflix", Category="엔터테인먼트", AmountInKRW=17000, BillingCycle="MONTHLY", NextBillingDate=new DateTime(now.Year, now.Month, 5), IconEmoji="🎬", IsActive=true }, 
+            new() { Name="Netflix", Category="엔터테인먼트", AmountInKRW=17000, BillingCycle="MONTHLY", NextBillingDate=new DateTime(now.Year, now.Month, 31), IconEmoji="🎬", IsActive=true }, // 31일 테스트
             new() { Name="Spotify", Category="음악", AmountInKRW=15166, BillingCycle="MONTHLY", NextBillingDate=new DateTime(now.Year, now.Month, 12), IconEmoji="🎵", IsActive=true }, 
             new() { Name="YouTube Premium", Category="엔터테인먼트", AmountInKRW=14900, BillingCycle="MONTHLY", NextBillingDate=new DateTime(now.Year, now.Month, 12), IconEmoji="▶️", IsActive=true }, 
             new() { Name="Adobe CC", Category="창작 도구", AmountInKRW=75886, BillingCycle="MONTHLY", NextBillingDate=new DateTime(now.Year, now.Month, 20), IconEmoji="🎨", IsActive=true }, 
