@@ -1,5 +1,5 @@
 @page "/settings"
-@attribute [Authorize]
+@*attribute [Authorize]*@
 @inject IAuthService AuthService
 @inject ICategoryService CategoryService
 @inject IJSRuntime JS
@@ -12,13 +12,12 @@
     <div class="d-flex align-center justify-space-between mb-6">
         <div>
             <div class="page-title">설정</div>
-            <div class="page-subtitle">계정 · 알림 · 카테고리를 관리합니다</div>
+            <div class="page-subtitle">계정 · 알림 · 화면 · 카테고리를 관리합니다</div>
         </div>
     </div>
 
     <MudGrid Spacing="3">
 
-        <!-- 1. 프로필 -->
         <MudItem xs="12" Class="fade-in-up fade-in-up-1">
             <div class="glass-card pa-5">
                 <div class="d-flex align-center mb-4">
@@ -30,7 +29,6 @@
                     </MudText>
                 </div>
 
-                <!-- 식별 정보 (정적 표시) -->
                 <div class="d-flex align-center pa-2 mb-3"
                      style="background: rgba(255,255,255,0.03); border-radius: 10px;">
                     <MudAvatar Color="Color.Primary" Size="Size.Medium" Class="mr-3">
@@ -86,7 +84,6 @@
             </div>
         </MudItem>
 
-        <!-- 2. 알림 -->
         <MudItem xs="12" Class="fade-in-up fade-in-up-2">
             <div class="glass-card pa-5">
                 <div class="d-flex align-center mb-4">
@@ -94,7 +91,7 @@
                              Style="color: var(--gold-400);" Class="mr-2" />
                     <MudText Typo="Typo.h6"
                              Style="font-weight:700; color: var(--text-primary);">
-                        알림
+                        알림 설정
                     </MudText>
                 </div>
 
@@ -135,8 +132,54 @@
             </div>
         </MudItem>
 
-        <!-- 3. 카테고리 -->
         <MudItem xs="12" Class="fade-in-up fade-in-up-3">
+            <div class="glass-card pa-5">
+                <div class="d-flex align-center mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Dashboard"
+                             Style="color: var(--gold-400);" Class="mr-2" />
+                    <MudText Typo="Typo.h6"
+                             Style="font-weight:700; color: var(--text-primary);">
+                        화면 UI 설정
+                    </MudText>
+                </div>
+
+                <MudText Typo="Typo.body2" Style="color: var(--text-secondary);" Class="mb-4">
+                    구독 관리 페이지의 목록 표시 방식을 선택하세요.
+                </MudText>
+
+                <MudRadioGroup T="string" @bind-Value="_viewMode" Class="w-100">
+                    <div class="d-flex gap-4 w-100">
+                        <div class="view-mode-card @(_viewMode == "list" ? "selected" : "")" @onclick='() => _viewMode = "list"'>
+                            <div class="view-icon-box">
+                                <MudIcon Icon="@Icons.Material.Filled.ViewList" Style="font-size: 3rem;" />
+                            </div>
+                            <MudText Typo="Typo.subtitle1" Style="font-weight: 700; color: var(--text-primary);">리스트형 (표)</MudText>
+                            <MudText Typo="Typo.caption" Style="color: var(--text-secondary);" Class="mb-2">한눈에 많은 정보 보기</MudText>
+                            <MudRadio Value="@("list")" Color="Color.Primary" />
+                        </div>
+
+                        <div class="view-mode-card @(_viewMode == "card" ? "selected" : "")" @onclick='() => _viewMode = "card"'>
+                            <div class="view-icon-box">
+                                <MudIcon Icon="@Icons.Material.Filled.GridView" Style="font-size: 3rem;" />
+                            </div>
+                            <MudText Typo="Typo.subtitle1" Style="font-weight: 700; color: var(--text-primary);">카드형 (그리드)</MudText>
+                            <MudText Typo="Typo.caption" Style="color: var(--text-secondary);" Class="mb-2">직관적이고 예쁜 디자인</MudText>
+                            <MudRadio Value="@("card")" Color="Color.Primary" />
+                        </div>
+                    </div>
+                </MudRadioGroup>
+
+                <div class="d-flex justify-end mt-4">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               Disabled="@_screenSaving"
+                               OnClick="SaveScreenSettings">
+                        @(_screenSaving ? "저장 중..." : "저장")
+                    </MudButton>
+                </div>
+            </div>
+        </MudItem>
+
+        <MudItem xs="12" Class="fade-in-up fade-in-up-4">
             <div class="glass-card pa-5">
                 <div class="d-flex align-center mb-4">
                     <MudIcon Icon="@Icons.Material.Filled.LocalOffer"
@@ -199,6 +242,43 @@
     </MudGrid>
 </div>
 
+<style>
+    /* 화면 UI 설정의 박스(카드) 디자인 */
+    .view-mode-card {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.02);
+        border: 2px solid rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        padding: 24px 16px 16px 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+    }
+    .view-mode-card:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+    .view-mode-card.selected {
+        border-color: #6366f1; /* Primary Color */
+        background: rgba(99, 102, 241, 0.08);
+    }
+    .view-icon-box {
+        color: var(--text-secondary);
+        margin-bottom: 12px;
+        transition: color 0.2s;
+    }
+    .view-mode-card.selected .view-icon-box {
+        color: #6366f1;
+    }
+    /* 박스 안의 라디오 버튼 간격 조정 */
+    .view-mode-card .mud-radio {
+        margin: 0;
+        margin-top: 8px;
+    }
+</style>
+
 @code {
     // 프로필
     private MudForm _profileForm = null!;
@@ -210,10 +290,14 @@
     private string _currentPassword = string.Empty;
     private string _newPassword = string.Empty;
 
-    // 알림
+    // 알림 설정
     private bool _alarmEnabled = true;
     private int _reminderDays = 7;
     private bool _notiSaving;
+    
+    // 화면 설정 (분리됨)
+    private string _viewMode = "list"; 
+    private bool _screenSaving;
 
     // 카테고리 (CategoryService 가 공유 상태 보관)
     private bool _categoriesLoading = true;
@@ -221,17 +305,18 @@
 
     private const string KeyNotiEnabled = "subtrack_noti_enabled";
     private const string KeyNotiDays = "subtrack_noti_days";
+    private const string KeyViewMode = "subtrack_view_mode"; 
 
     protected override async Task OnInitializedAsync()
     {
         await LoadProfileAsync();
-        await LoadNotificationsAsync();
+        await LoadSettingsAsync();
         await LoadCategoriesAsync();
         CategoryService.OnChange += OnCategoriesChanged;
     }
 
     private void OnCategoriesChanged() => InvokeAsync(StateHasChanged);
-
+    
     public void Dispose()
     {
         CategoryService.OnChange -= OnCategoriesChanged;
@@ -250,12 +335,16 @@
         }
     }
 
-    private async Task LoadNotificationsAsync()
+    private async Task LoadSettingsAsync()
     {
         try
         {
+            // 알림 불러오기
             _alarmEnabled = await GetLocalBool(KeyNotiEnabled, true);
             _reminderDays = await GetLocalInt(KeyNotiDays, 7);
+            
+            // 화면 UI 불러오기
+            _viewMode = await JS.InvokeAsync<string?>("localStorage.getItem", KeyViewMode) ?? "list";
         }
         catch { /* localStorage 미접근 시 기본값 유지 */ }
     }
@@ -263,21 +352,14 @@
     private async Task LoadCategoriesAsync()
     {
         _categoriesLoading = true;
-        try
-        {
-            await CategoryService.EnsureLoadedAsync();
-        }
-        finally
-        {
-            _categoriesLoading = false;
-        }
+        try { await CategoryService.EnsureLoadedAsync(); }
+        finally { _categoriesLoading = false; }
     }
 
     private IEnumerable<string> ValidatePassword(string? password)
     {
-        if (string.IsNullOrEmpty(password)) yield break; // 선택 필드
-        if (password.Length < 8)
-            yield return "비밀번호는 8자 이상이어야 합니다";
+        if (string.IsNullOrEmpty(password)) yield break; 
+        if (password.Length < 8) yield return "비밀번호는 8자 이상이어야 합니다";
     }
 
     private async Task SaveProfile()
@@ -285,20 +367,13 @@
         _profileSaving = true;
         try
         {
-            // TODO: 백엔드에 PATCH /api/auth/me 등 추가되면 실제 호출로 교체
             await Task.Delay(200);
             _currentPassword = string.Empty;
             _newPassword = string.Empty;
             Snackbar.Add("프로필이 저장되었습니다 (백엔드 미구현 — UI 검증만 동작)", Severity.Info);
         }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"저장 실패: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _profileSaving = false;
-        }
+        catch (Exception ex) { Snackbar.Add($"저장 실패: {ex.Message}", Severity.Error); }
+        finally { _profileSaving = false; }
     }
 
     private async Task SaveNotifications()
@@ -306,20 +381,24 @@
         _notiSaving = true;
         try
         {
-            await JS.InvokeVoidAsync("localStorage.setItem", KeyNotiEnabled,
-                _alarmEnabled ? "true" : "false");
-            await JS.InvokeVoidAsync("localStorage.setItem", KeyNotiDays,
-                _reminderDays.ToString());
+            await JS.InvokeVoidAsync("localStorage.setItem", KeyNotiEnabled, _alarmEnabled ? "true" : "false");
+            await JS.InvokeVoidAsync("localStorage.setItem", KeyNotiDays, _reminderDays.ToString());
             Snackbar.Add("알림 설정이 저장되었습니다", Severity.Success);
         }
-        catch (Exception ex)
+        catch (Exception ex) { Snackbar.Add($"저장 실패: {ex.Message}", Severity.Error); }
+        finally { _notiSaving = false; }
+    }
+
+    private async Task SaveScreenSettings()
+    {
+        _screenSaving = true;
+        try
         {
-            Snackbar.Add($"저장 실패: {ex.Message}", Severity.Error);
+            await JS.InvokeVoidAsync("localStorage.setItem", KeyViewMode, _viewMode);
+            Snackbar.Add("화면 UI 설정이 저장되었습니다", Severity.Success);
         }
-        finally
-        {
-            _notiSaving = false;
-        }
+        catch (Exception ex) { Snackbar.Add($"저장 실패: {ex.Message}", Severity.Error); }
+        finally { _screenSaving = false; }
     }
 
     private async Task AddCategory()
