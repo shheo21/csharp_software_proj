@@ -44,6 +44,9 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<ISubscriptionCalculationService, SubscriptionCalculationService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<ISpendingAnalysisService, SpendingAnalysisService>();
 
 builder.Services.AddSwaggerGen(c =>
 {
