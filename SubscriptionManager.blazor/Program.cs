@@ -14,6 +14,9 @@ public class Program
         builder.RootComponents.Add<App>("#app");
         builder.RootComponents.Add<HeadOutlet>("head::after");
 
+        var apiBaseUrl = builder.Configuration["ApiBaseUrl"]
+            ?? throw new InvalidOperationException("ApiBaseUrl이 설정되지 않았습니다.");
+
         builder.Services.AddScoped<AuthMessageHandler>();
         builder.Services.AddScoped(sp =>
         {
@@ -21,7 +24,7 @@ public class Program
             authHandler.InnerHandler = new HttpClientHandler();
             return new HttpClient(authHandler)
             {
-                BaseAddress = new Uri("https://localhost:7188")
+                BaseAddress = new Uri(apiBaseUrl)
             };
         });
 

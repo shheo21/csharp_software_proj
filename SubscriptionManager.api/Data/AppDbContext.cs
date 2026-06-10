@@ -40,7 +40,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(e => e.Category).HasMaxLength(50);
             entity.Property(e => e.Currency).HasMaxLength(10);
             entity.Property(e => e.BillingCycle).HasMaxLength(10);
-            entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.Amount).HasColumnType("numeric(18,2)");
             entity.HasOne(e => e.User)
                   .WithMany()
                   .HasForeignKey(e => e.UserId)
@@ -52,7 +52,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
             entity.HasKey(e => e.Id);
             entity.Property(e => e.CurrencyCode).IsRequired().HasMaxLength(10);
             entity.HasIndex(e => e.CurrencyCode).IsUnique();
-            entity.Property(e => e.RateToKRW).HasColumnType("decimal(18,4)");
+            entity.Property(e => e.RateToKRW).HasColumnType("numeric(18,4)");
         });
         
         // Notification 엔티티 설정

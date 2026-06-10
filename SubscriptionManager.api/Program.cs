@@ -7,12 +7,15 @@ using SubscriptionManager.api.Data;
 using SubscriptionManager.api.Models;
 using SubscriptionManager.api.Services;
 
+// Npgsql 6+는 DateTime.Kind=Utc만 허용 — SQLite에서 마이그레이션 시 레거시 모드로 완화
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
-// EF Core + SQLite
+// EF Core + PostgreSQL
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")
-        ?? "Data Source=subscriptions.db"));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection이 설정되지 않았습니다.")));
 
 // ASP.NET Core Identity + EF Core 연동
 builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
@@ -114,67 +117,27 @@ using (var scope = app.Services.CreateScope())
     var seedUser = await userManager.FindByEmailAsync(mockEmail);
     if (seedUser != null && !db.Subscriptions.Any(s => s.UserId == seedUser.Id))
     {
-        var today = DateTime.UtcNow.Date;
         db.Subscriptions.AddRange(
-            new Subscription
-            {
-                UserId = seedUser.Id,
-                Name = "Netflix",
-                Category = "엔터테인먼트",
-                Amount = 17000m,
-                Currency = "KRW",
-                BillingCycle = "MONTHLY",
-                NextBillingDate = today.AddDays(12),
-                IconEmoji = "🎬",
-                Notes = "가족 요금제",
-                IsActive = true,
-            },
-            new Subscription
-            {
-                UserId = seedUser.Id,
-                Name = "Spotify",
-                Category = "음악",
-                Amount = 10.99m,
-                Currency = "USD",
-                BillingCycle = "MONTHLY",
-                NextBillingDate = today.AddDays(5),
-                IconEmoji = "🎵",
-                IsActive = true,
-            },
-            new Subscription
-            {
-                UserId = seedUser.Id,
-                Name = "iCloud",
-                Category = "클라우드 스토리지",
-                Amount = 1.29m,
-                Currency = "USD",
-                BillingCycle = "MONTHLY",
-                NextBillingDate = today.AddDays(20),
-                IconEmoji = "☁️",
-                IsActive = true,
-            },
-            new Subscription
-            {
-                UserId = seedUser.Id,
-                Name = "Adobe Creative Cloud",
-                Category = "생산성",
-                Amount = 54.99m,
-                Currency = "USD",
-                BillingCycle = "MONTHLY",
-                NextBillingDate = today.AddDays(3),
-                IconEmoji = "🎨",
-                IsActive = true,
-            }
+            new Subscription { UserId = seedUser.Id, Name = "Netflix", Category = "엔터테인먼트", Amount = 17000m, Currency = "KRW", BillingCycle = "MONTHLY", NextBillingDate = new DateTime(2026, 6, 1), IconEmoji = "🎬", Notes = "가족 요금제", IsActive = true },
+            new Subscription { UserId = seedUser.Id, Name = "Spotify", Category = "음악", Amount = 10.99m, Currency = "USD", BillingCycle = "MONTHLY", NextBillingDate = new DateTime(2026, 5, 25), IconEmoji = "🎵", IsActive = true },
+            new Subscription { UserId = seedUser.Id, Name = "iCloud", Category = "클라우드 스토리지", Amount = 1.29m, Currency = "USD", BillingCycle = "MONTHLY", NextBillingDate = new DateTime(2026, 6, 9), IconEmoji = "☁️", IsActive = true },
+            new Subscription { UserId = seedUser.Id, Name = "Adobe Creative Cloud", Category = "생산성", Amount = 54.99m, Currency = "USD", BillingCycle = "MONTHLY", NextBillingDate = new DateTime(2026, 5, 23), IconEmoji = "🎨", IsActive = true },
+            new Subscription { UserId = seedUser.Id, Name = "YouTube Premium", Category = "엔터테인먼트", Amount = 14900m, Currency = "KRW", BillingCycle = "MONTHLY", NextBillingDate = new DateTime(2026, 6, 18), IconEmoji = "▶️", IsActive = true },
+            new Subscription { UserId = seedUser.Id, Name = "GitHub Copilot", Category = "개발 도구", Amount = 10m, Currency = "USD", BillingCycle = "MONTHLY", NextBillingDate = new DateTime(2026, 6, 13), IconEmoji = "🤖", IsActive = true },
+            new Subscription { UserId = seedUser.Id, Name = "Notion", Category = "생산성", Amount = 16m, Currency = "USD", BillingCycle = "MONTHLY", NextBillingDate = new DateTime(2026, 6, 25), IconEmoji = "📝", Notes = "팀 플랜", IsActive = true },
+            new Subscription { UserId = seedUser.Id, Name = "ChatGPT Plus", Category = "AI 서비스", Amount = 20m, Currency = "USD", BillingCycle = "MONTHLY", NextBillingDate = new DateTime(2026, 6, 11), IconEmoji = "🧠", IsActive = true },
+            new Subscription { UserId = seedUser.Id, Name = "Disney+", Category = "엔터테인먼트", Amount = 9.99m, Currency = "USD", BillingCycle = "MONTHLY", NextBillingDate = new DateTime(2026, 7, 2), IconEmoji = "🏰", IsActive = true },
+            new Subscription { UserId = seedUser.Id, Name = "Microsoft 365", Category = "생산성", Amount = 99.99m, Currency = "USD", BillingCycle = "YEARLY", NextBillingDate = new DateTime(2026, 7, 10), IconEmoji = "💼", Notes = "가족 플랜", IsActive = true },
+            new Subscription { UserId = seedUser.Id, Name = "AWS", Category = "클라우드", Amount = 45.30m, Currency = "USD", BillingCycle = "MONTHLY", NextBillingDate = new DateTime(2026, 6, 15), IconEmoji = "☁️", Notes = "개인 프로젝트", IsActive = true },
+            new Subscription { UserId = seedUser.Id, Name = "Nintendo Switch Online", Category = "게임", Amount = 4800m, Currency = "JPY", BillingCycle = "YEARLY", NextBillingDate = new DateTime(2027, 1, 10), IconEmoji = "🎮", IsActive = true },
+            new Subscription { UserId = seedUser.Id, Name = "Duolingo Plus", Category = "교육", Amount = 6.99m, Currency = "USD", BillingCycle = "MONTHLY", NextBillingDate = new DateTime(2026, 6, 21), IconEmoji = "🦉", IsActive = false }
         );
         await db.SaveChangesAsync();
     }
 }
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "SubscriptionManager API v1"));
-}
+app.UseSwagger();
+app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "SubscriptionManager API v1"));
 
 app.UseHttpsRedirection();
 
