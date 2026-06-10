@@ -40,6 +40,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 builder.Services.AddCors();
+builder.Services.AddScoped<SubscriptionService>();
+builder.Services.AddScoped<AuthService>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
