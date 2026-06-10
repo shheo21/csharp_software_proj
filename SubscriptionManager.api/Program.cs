@@ -39,10 +39,17 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddCors();
 builder.Services.AddScoped<SubscriptionService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<ISubscriptionCalculationService, SubscriptionCalculationService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<ISpendingAnalysisService, SpendingAnalysisService>();
+
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "SubscriptionManager API", Version = "v1" });
@@ -167,6 +174,16 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+if (app.Environment.IsDevelopment())
+{
+    // Blazor 측에서 API 호출 허용
+    app.UseCors(p => p
+    .WithOrigins("https://localhost:7000", "http://localhost:5030")
+    .AllowAnyHeader()
+    .AllowAnyMethod());
+}
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

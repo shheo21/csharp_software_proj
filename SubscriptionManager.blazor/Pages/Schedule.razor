@@ -1,0 +1,436 @@
+@page "/schedule"
+@*attribute [Authorize]*@
+@inject ISubscriptionApiService ApiService
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+
+<PageTitle>일정 — SubTrack</PageTitle>
+
+<div class="fade-in-up">
+    <div class="d-flex align-center justify-space-between mb-6">
+        <div>
+            <div class="page-title">구독 일정</div>
+            <div class="page-subtitle">결제 예정인 구독 서비스를 확인하세요</div>
+        </div>
+    </div>
+
+    <MudGrid Spacing="3">
+        <MudItem xs="12" md="8" Class="fade-in-up fade-in-up-1">
+            <div class="glass-card pa-6" style="height: 100%;">
+                
+                <div class="d-flex justify-space-between align-center mb-6">
+                    <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" OnClick="PrevMonth" Style="color: var(--text-primary);" />
+                    <MudText Typo="Typo.h5" Style="font-weight: 800; color: var(--text-primary); letter-spacing: 0.05em;">
+                        @_displayMonth.ToString("yyyy년 MM월")
+                    </MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" OnClick="NextMonth" Style="color: var(--text-primary);" />
+                </div>
+
+                <div class="calendar-grid">
+                    @foreach (var day in new[] { "일", "월", "화", "수", "목", "금", "토" })
+                    {
+                        <div class="calendar-header-cell" style="@(day == "일" ? "color: var(--accent-red);" : day == "토" ? "color: var(--accent-blue);" : "")">
+                            @day
+                        </div>
+                    }
+
+                    @foreach (var cell in _calendarCells)
+                    {
+                        var subsForDay = GetSubscriptionsForDate(cell.Date);
+                        bool isSelected = cell.Date == _selectedDate;
+                        bool isToday = cell.Date == DateTime.Today;
+
+                        <div class="calendar-cell @(cell.IsCurrentMonth ? "" : "dimmed") @(isSelected ? "selected" : "")" 
+                             @onclick="() => SelectDate(cell.Date)">
+                            
+                            <div class="date-number @(isToday ? "today" : "")" 
+                                 style="@(cell.Date.DayOfWeek == DayOfWeek.Sunday ? "color: var(--accent-red);" : cell.Date.DayOfWeek == DayOfWeek.Saturday ? "color: var(--accent-blue);" : "")">
+                                @cell.Date.Day
+                            </div>
+
+                            <div class="event-markers">
+                                @foreach (var sub in subsForDay.Take(4))
+                                {
+                                    <div class="event-marker" style="background-color: @GetCategoryColor(sub.Category);" title="@sub.Name"></div>
+                                }
+                                @if (subsForDay.Count > 4)
+                                {
+                                    <div class="event-marker-more">+@(subsForDay.Count - 4)</div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </MudItem>
+
+        <MudItem xs="12" md="4" Class="fade-in-up fade-in-up-2">
+            
+            <div class="glass-card pa-5 mb-4" style="min-height: 300px;">
+                <div class="d-flex align-center mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.EventNote" Style="color: var(--gold-400);" Class="mr-2" />
+                    <MudText Typo="Typo.h6" Style="font-weight:700; color: var(--text-primary);">
+                        @(_selectedDate?.ToString("M월 d일 (ddd)")) 일정
+                    </MudText>
+                </div>
+
+                @{
+                    var selectedSubs = GetSubscriptionsForDate(_selectedDate ?? DateTime.Today);
+                }
+
+                @if (!selectedSubs.Any())
+                {
+                    <div class="d-flex flex-column align-center justify-center pa-8" style="opacity: 0.5;">
+                        <MudIcon Icon="@Icons.Material.Filled.EventAvailable" Style="font-size: 3rem; color: var(--text-secondary);" Class="mb-3" />
+                        <MudText Typo="Typo.body2" Style="color: var(--text-secondary);">결제 예정인 구독이 없습니다.</MudText>
+                    </div>
+                }
+                else
+                {
+                    <div class="d-flex flex-column gap-3">
+                        @foreach (var sub in selectedSubs)
+                        {
+                            <div class="pa-3" style="background: rgba(255,255,255,0.03); border-left: 4px solid @GetCategoryColor(sub.Category); border-radius: 8px;">
+                                <div class="d-flex justify-space-between align-center mb-1">
+                                    <div class="d-flex align-center gap-2">
+                                        <span style="font-size: 1.2rem;">@(sub.IconEmoji ?? "📦")</span>
+                                        <span style="font-weight: 700; color: var(--text-primary);">@sub.Name</span>
+                                    </div>
+                                    <span style="font-weight: 800; color: var(--gold-400);">₩@sub.AmountInKRW.ToString("N0")</span>
+                                </div>
+                                <div class="d-flex justify-space-between align-center">
+                                    <span style="font-size: 0.75rem; color: var(--text-secondary);">@sub.Category</span>
+                                    <span style="font-size: 0.75rem; color: var(--text-secondary);">@(sub.BillingCycle == "MONTHLY" ? "월간" : "연간")</span>
+                                </div>
+                            </div>
+                        }
+                        
+                        <div class="mt-3 pt-3 d-flex justify-space-between align-center" style="border-top: 1px solid rgba(255,255,255,0.08);">
+                            <MudText Typo="Typo.body2" Style="color: var(--text-secondary);">총 결제 예정액</MudText>
+                            <MudText Typo="Typo.subtitle1" Style="font-weight: 800; color: var(--accent-red);">
+                                ₩@selectedSubs.Sum(s => s.AmountInKRW).ToString("N0")
+                            </MudText>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="glass-card pa-5">
+                <div class="d-flex align-center mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Palette" Style="color: var(--gold-400);" Class="mr-2" />
+                    <MudText Typo="Typo.h6" Style="font-weight:700; color: var(--text-primary);">
+                        카테고리 색상 설정
+                    </MudText>
+                </div>
+                
+                <MudText Typo="Typo.caption" Style="color: var(--text-secondary);" Class="mb-3 d-block">
+                    색상을 클릭하여 달력에 표시될 마커 색상을 변경하세요.
+                </MudText>
+
+                <div class="d-flex flex-column gap-2">
+                    @foreach (var cat in _uniqueCategories)
+                    {
+                        <div class="d-flex align-center justify-space-between py-1">
+                            <MudText Typo="Typo.body2" Style="color: var(--text-primary);">@cat</MudText>
+                            
+                            <input type="color" 
+                                   value="@GetCategoryColor(cat)" 
+                                   @onchange="@(e => UpdateCategoryColor(cat, e.Value?.ToString()))"
+                                   style="width: 32px; height: 32px; border: none; border-radius: 50%; cursor: pointer; background: transparent; padding: 0;" />
+                        </div>
+                    }
+                </div>
+                
+                <div class="d-flex justify-end mt-4">
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="ResetColors">
+                        기본 색상 복구
+                    </MudButton>
+                </div>
+            </div>
+            
+        </MudItem>
+    </MudGrid>
+</div>
+
+<style>
+    /* 달력 그리드 레이아웃 */
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 8px;
+    }
+    
+    .calendar-header-cell {
+        text-align: center;
+        font-weight: 700;
+        color: var(--text-secondary);
+        padding: 10px 0;
+        font-size: 0.9rem;
+    }
+    
+    .calendar-cell {
+        aspect-ratio: 1 / 1;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        padding: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .calendar-cell:hover {
+        background: rgba(255, 255, 255, 0.06);
+    }
+    
+    .calendar-cell.selected {
+        border-color: var(--gold-400);
+        background: rgba(222, 255, 154, 0.1);
+        box-shadow: 0 0 12px rgba(222, 255, 154, 0.1);
+    }
+    
+    .calendar-cell.dimmed {
+        opacity: 0.3;
+    }
+    
+    .date-number {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--text-primary);
+        margin-bottom: 4px;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+    }
+    
+    .date-number.today {
+        background: var(--primary-main);
+        color: white !important;
+    }
+    
+    /* 일정 마커 스타일 */
+    .event-markers {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-top: auto;
+    }
+    
+    .event-marker {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+    }
+    
+    .event-marker-more {
+        font-size: 0.6rem;
+        color: var(--text-secondary);
+        font-weight: 700;
+        line-height: 8px;
+    }
+    
+    /* input type=color 커스텀 (크롬/사파리 대응) */
+    input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+    input[type="color"]::-webkit-color-swatch { border: 2px solid rgba(255,255,255,0.2); border-radius: 8px; }
+</style>
+
+@code {
+    private DateTime _displayMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+    private DateTime? _selectedDate = DateTime.Today;
+    private List<CalendarCell> _calendarCells = new();
+    
+    private List<SubscriptionDto> _subscriptions = new();
+    private List<string> _uniqueCategories = new();
+    
+    // 카테고리별 색상을 저장할 딕셔너리
+    private Dictionary<string, string> _categoryColors = new();
+    private const string KeyColors = "subtrack_calendar_colors";
+
+    // 기본 색상 팔레트
+    private readonly Dictionary<string, string> _defaultColors = new()
+    {
+        { "엔터테인먼트", "#ff4d4f" }, // Red
+        { "음악", "#b37feb" },        // Purple
+        { "창작 도구", "#ff75c3" },   // Pink
+        { "개발 도구", "#69c0ff" },   // Blue
+        { "기타", "#52c41a" }         // Green
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+        await LoadColors();
+        GenerateCalendar();
+    }
+
+    private async Task LoadData()
+    {
+        try 
+        { 
+            _subscriptions = await ApiService.GetSubscriptionsAsync(); 
+        }
+        catch 
+        { 
+            _subscriptions = GetMockSubscriptionsForCalendar(); 
+        }
+        
+        // 고유 카테고리 추출
+        _uniqueCategories = _subscriptions.Select(s => s.Category).Distinct().ToList();
+    }
+
+    // 색상 관련 로직
+    private async Task LoadColors()
+    {
+        try
+        {
+            var savedColorsJson = await JS.InvokeAsync<string?>("localStorage.getItem", KeyColors);
+            if (!string.IsNullOrEmpty(savedColorsJson))
+            {
+                _categoryColors = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(savedColorsJson) ?? new();
+            }
+        }
+        catch { }
+    }
+
+    private async Task SaveColors()
+    {
+        try
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(_categoryColors);
+            await JS.InvokeVoidAsync("localStorage.setItem", KeyColors, json);
+        }
+        catch { }
+    }
+
+    private async Task UpdateCategoryColor(string category, string? newColor)
+    {
+        if (string.IsNullOrEmpty(newColor)) return;
+        _categoryColors[category] = newColor;
+        await SaveColors();
+        StateHasChanged();
+    }
+
+    private async Task ResetColors()
+    {
+        _categoryColors.Clear();
+        await SaveColors();
+        Snackbar.Add("기본 색상으로 복구되었습니다.", Severity.Success);
+        StateHasChanged();
+    }
+
+    private string GetCategoryColor(string category)
+    {
+        if (_categoryColors.TryGetValue(category, out var savedColor)) return savedColor;
+        if (_defaultColors.TryGetValue(category, out var defaultColor)) return defaultColor;
+        return "#ffffff"; // 기본 흰색
+    }
+
+    // 캘린더 생성 로직
+    private void GenerateCalendar()
+    {
+        _calendarCells.Clear();
+        
+        var firstDayOfMonth = new DateTime(_displayMonth.Year, _displayMonth.Month, 1);
+        var lastDayOfMonth = firstDayOfMonth.AddMonths(1).AddDays(-1);
+        
+        // 달력의 시작일 (이전 달의 날짜 포함)
+        int startOffset = (int)firstDayOfMonth.DayOfWeek;
+        var startDate = firstDayOfMonth.AddDays(-startOffset);
+        
+        // 6주(42일) 렌더링
+        for (int i = 0; i < 42; i++)
+        {
+            var currentDate = startDate.AddDays(i);
+            _calendarCells.Add(new CalendarCell
+            {
+                Date = currentDate,
+                IsCurrentMonth = currentDate.Month == _displayMonth.Month
+            });
+        }
+    }
+
+    private void PrevMonth()
+    {
+        _displayMonth = _displayMonth.AddMonths(-1);
+        GenerateCalendar();
+    }
+
+    private void NextMonth()
+    {
+        _displayMonth = _displayMonth.AddMonths(1);
+        GenerateCalendar();
+    }
+
+    private void SelectDate(DateTime date)
+    {
+        _selectedDate = date;
+    }
+
+    // 1. 선택한 날짜에 결제 예정인 구독을 찾는 메서드
+    private List<SubscriptionDto> GetSubscriptionsForDate(DateTime date)
+    {
+        // IsBillingDate 메서드를 통해 이 구독이 '매월/매년' 반복되는 주기에 맞는지 검사
+        return _subscriptions.Where(s => s.IsActive && IsBillingDate(s, date)).ToList();
+    }
+
+    // 2. 달력의 특정 날짜가 이 구독의 진짜 '결제 갱신일'인지 계산하는 똑똑한 로직
+    private bool IsBillingDate(SubscriptionDto sub, DateTime targetDate)
+    {
+        // 1) 월간(MONTHLY) 결제인 경우 - 매달 같은 '일(Day)'에 표시
+        if (sub.BillingCycle == "MONTHLY" || sub.BillingCycle == "Monthly")
+        {
+            int billingDay = sub.NextBillingDate.Day;
+            int daysInTargetMonth = DateTime.DaysInMonth(targetDate.Year, targetDate.Month);
+            
+            // 말일 보정: 결제일이 31일인데, 이번 달이 30일(또는 28일)까지밖에 없다면 말일로 조정
+            if (billingDay > daysInTargetMonth)
+            {
+                billingDay = daysInTargetMonth; 
+            }
+
+            return targetDate.Day == billingDay;
+        }
+        // 2) 연간(YEARLY) 결제인 경우 - 매년 같은 '월(Month)'과 '일(Day)'에 표시
+        else if (sub.BillingCycle == "YEARLY" || sub.BillingCycle == "Yearly")
+        {
+            int billingMonth = sub.NextBillingDate.Month;
+            int billingDay = sub.NextBillingDate.Day;
+
+            // 윤년 보정: 결제일이 2월 29일인데, 올해가 윤년이 아니라면 28일로 조정
+            if (billingMonth == 2 && billingDay == 29 && !DateTime.IsLeapYear(targetDate.Year))
+            {
+                billingDay = 28;
+            }
+
+            return targetDate.Month == billingMonth && targetDate.Day == billingDay;
+        }
+
+        return false;
+    }
+
+    private class CalendarCell
+    {
+        public DateTime Date { get; set; }
+        public bool IsCurrentMonth { get; set; }
+    }
+
+    // 달력 화면 테스트를 위해 날짜가 골고루 퍼진 가짜 데이터 생성
+    private List<SubscriptionDto> GetMockSubscriptionsForCalendar() 
+    {
+        var now = DateTime.Today;
+        return new List<SubscriptionDto> 
+        { 
+            new() { Name="Netflix", Category="엔터테인먼트", AmountInKRW=17000, BillingCycle="MONTHLY", NextBillingDate=new DateTime(now.Year, now.Month, 31), IconEmoji="🎬", IsActive=true }, // 31일 테스트
+            new() { Name="Spotify", Category="음악", AmountInKRW=15166, BillingCycle="MONTHLY", NextBillingDate=new DateTime(now.Year, now.Month, 12), IconEmoji="🎵", IsActive=true }, 
+            new() { Name="YouTube Premium", Category="엔터테인먼트", AmountInKRW=14900, BillingCycle="MONTHLY", NextBillingDate=new DateTime(now.Year, now.Month, 12), IconEmoji="▶️", IsActive=true }, 
+            new() { Name="Adobe CC", Category="창작 도구", AmountInKRW=75886, BillingCycle="MONTHLY", NextBillingDate=new DateTime(now.Year, now.Month, 20), IconEmoji="🎨", IsActive=true }, 
+            new() { Name="GitHub Copilot", Category="개발 도구", AmountInKRW=13800, BillingCycle="MONTHLY", NextBillingDate=new DateTime(now.Year, now.Month, 20), IconEmoji="💻", IsActive=true },
+            new() { Name="ChatGPT Plus", Category="기타", AmountInKRW=29000, BillingCycle="MONTHLY", NextBillingDate=new DateTime(now.Year, now.Month, 28), IconEmoji="🤖", IsActive=true },
+            new() { Name="CLIP STUDIO", Category="창작 도구", AmountInKRW=4800, BillingCycle="YEARLY", NextBillingDate=new DateTime(now.Year, now.Month, 2), IconEmoji="✏️", IsActive=true }
+        };
+    }
+}

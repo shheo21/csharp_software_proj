@@ -1,5 +1,7 @@
 @inject ISubscriptionApiService ApiService
+@inject ICategoryService CategoryService
 @inject ISnackbar Snackbar
+@implements IDisposable
 
 <MudDialog Options='new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true, BackdropClick = false }'>
     <TitleContent>
@@ -184,12 +186,7 @@
     private DateTime? _nextBillingDate = DateTime.Now.AddMonths(1);
     private decimal _currentRate = 0;
 
-    private List<string> _categories = new()
-    {
-        "엔터테인먼트", "음악", "창작 도구", "개발 도구",
-        "클라우드 스토리지", "생산성", "뉴스/미디어",
-        "게임", "교육", "건강/피트니스", "기타"
-    };
+    private IReadOnlyList<string> _categories = Array.Empty<string>();
 
     private readonly string[] _emojiPool = new[]
     {
@@ -198,8 +195,12 @@
     };
     private int _emojiIndex = 0;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        await CategoryService.EnsureLoadedAsync();
+        _categories = CategoryService.Categories;
+        CategoryService.OnChange += OnCategoriesChanged;
+
         if (Subscription != null)
         {
             _isEdit = true;
@@ -226,6 +227,17 @@
             _nextBillingDate = DateTime.Now.AddMonths(1);
             _isActive = true;
         }
+    }
+
+    private void OnCategoriesChanged()
+    {
+        _categories = CategoryService.Categories;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        CategoryService.OnChange -= OnCategoriesChanged;
     }
 
     private void Close() => MudDialog.Cancel();

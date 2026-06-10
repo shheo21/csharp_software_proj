@@ -1,4 +1,5 @@
-@page "/"
+@page "/dashboard"
+@*attribute [Authorize]*@
 @inject ISubscriptionApiService ApiService
 @inject NavigationManager Nav
 
@@ -24,9 +25,7 @@
         <!-- KPI Summary Cards -->
         <MudGrid Spacing="3" Class="mb-5">
             <MudItem xs="12" sm="6" md="3" Class="fade-in-up fade-in-up-1">
-                <div class="stat-card pa-5 d-flex flex-column" style="min-height:120px; position:relative; overflow:hidden;">
-                    <div style="position:absolute; top:-20px; right:-20px; width:100px; height:100px;
-                                border-radius:50%; background: radial-gradient(circle, rgba(99,102,241,0.1), transparent);"></div>
+                <div class="stat-card pa-5 d-flex flex-column" style="min-height:120px;">
                     <div class="stat-label mb-2">이번 달 예상 지출</div>
                     <div class="stat-value" style="color: var(--gold-400);">
                         ₩@_summary.TotalMonthlyKRW.ToString("N0")
