@@ -39,9 +39,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient();
 builder.Services.AddCors();
 builder.Services.AddScoped<SubscriptionService>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<ExchangeRateService>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
