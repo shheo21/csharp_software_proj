@@ -9,10 +9,10 @@ using SubscriptionManager.api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// EF Core + SQLite
+// EF Core + PostgreSQL
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")
-        ?? "Data Source=subscriptions.db"));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection이 설정되지 않았습니다.")));
 
 // ASP.NET Core Identity + EF Core 연동
 builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
