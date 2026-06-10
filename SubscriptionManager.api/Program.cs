@@ -178,14 +178,13 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-if (app.Environment.IsDevelopment())
-{
-    // Blazor 측에서 API 호출 허용
-    app.UseCors(p => p
-    .WithOrigins("https://localhost:7000", "http://localhost:5030")
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? ["https://localhost:7000", "http://localhost:5030"];
+
+app.UseCors(p => p
+    .WithOrigins(allowedOrigins)
     .AllowAnyHeader()
     .AllowAnyMethod());
-}
 
 app.UseAuthentication();
 app.UseAuthorization();
