@@ -7,7 +7,7 @@
 - **Runtime**: .NET 10
 - **Framework**: ASP.NET Core Web API
 - **ORM**: Entity Framework Core 10
-- **DB**: SQLite
+- **DB**: PostgreSQL
 - **인증**: ASP.NET Core Identity + JWT Bearer + Refresh Token
 - **문서화**: Swagger / OpenAPI
 
@@ -207,3 +207,36 @@ SubscriptionManager.api/
 │   └── AppDbContext.cs
 └── Program.cs
 ```
+
+# SubscriptionManager Blazor
+
+구독 관리 웹페이지를 제공하는 Blazor 프로젝트입니다.
+
+## 프론트엔드 API 설정
+
+Blazor WASM은 `SubscriptionManager.blazor/wwwroot/appsettings.json`의 `ApiBaseUrl` 값을 읽어 백엔드 API 기본 주소로 사용합니다.
+
+```json
+{
+  "ApiBaseUrl": "${API_BASE_URL}"
+}
+```
+
+배포용 `appsettings.json`은 placeholder를 유지하고, GitHub Pages workflow에서 빌드 전에 `API_BASE_URL` 값으로 치환합니다. `API_BASE_URL`은 비밀값이 아니므로 GitHub Actions Secret보다 Variable을 권장합니다.
+
+```yaml
+- name: Inject API base URL
+  shell: bash
+  env:
+    API_BASE_URL: ${{ vars.API_BASE_URL }}
+  run: |
+    sed -i "s|\${API_BASE_URL}|$API_BASE_URL|g" SubscriptionManager.blazor/wwwroot/appsettings.json
+```
+
+GitHub Actions Variable 예시:
+
+```text
+API_BASE_URL=https://subscriptionmanager-api.onrender.com
+```
+
+로컬 개발에서는 `SubscriptionManager.blazor/wwwroot/appsettings.Development.json`이 `https://localhost:7188`을 사용합니다.

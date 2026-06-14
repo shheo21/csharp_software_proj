@@ -6,7 +6,7 @@ namespace SubscriptionManager.blazor.Services;
 
 public static class AuthHttpRequestOptions
 {
-    // refresh 자체 호출이나, 401 응답 시 재시도하면 안 되는 요청에 마킹.
+    // refresh 자체 호출이나, 401 응답 시 재시도하면 안 되는 요청에 표시
     public static readonly HttpRequestOptionsKey<bool> SkipAuthRetry = new("__skip_auth_retry");
 }
 
@@ -72,8 +72,8 @@ public class AuthMessageHandler : DelegatingHandler
             if (!string.IsNullOrWhiteSpace(current) && current != oldToken)
                 return current;
 
-            // 이미 로그아웃 처리됨 (storage 비어 있음) — 추가 refresh/LogoutAsync 시도 금지.
-            // 후속 401 마다 LogoutAsync → NotifyAuthStateChanged 가 반복 트리거되는 무한 사이클을 차단.
+            // 이미 로그아웃 처리됨 (local storage 비어 있음) — 추가 refresh/LogoutAsync 시도 금지.
+            // 후속 401 마다 LogoutAsync → NotifyAuthStateChanged 가 반복 트리거되는 무한 사이클 방지.
             if (string.IsNullOrWhiteSpace(current))
                 return null;
 

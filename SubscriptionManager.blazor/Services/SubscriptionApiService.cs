@@ -11,7 +11,6 @@ public interface ISubscriptionApiService
     Task DeleteAsync(int id);
     Task<DashboardSummary> GetDashboardAsync();
     Task<List<ExchangeRateSummary>> GetExchangeRatesAsync();
-    Task<List<string>> GetCategoriesAsync();
     Task<SpendingTrendsDto> GetSpendingTrendsAsync(int months = 12);
 }
 
@@ -32,14 +31,18 @@ public class SubscriptionApiService : ISubscriptionApiService
         if (!string.IsNullOrWhiteSpace(currency)) query.Add($"currency={Uri.EscapeDataString(currency)}");
 
         var url = "api/subscriptions" + (query.Count > 0 ? "?" + string.Join("&", query) : "");
-        return await _http.GetFromJsonAsync<List<SubscriptionDto>>(url) ?? new();
+        var subscriptions = await _http.GetFromJsonAsync<List<SubscriptionDto>>(url) ?? new();
+
+        await RenewOverdueBillingDatesAsync(subscriptions);
+
+        return subscriptions;
     }
 
     public async Task<SubscriptionDto> CreateAsync(CreateSubscriptionRequest request)
     {
         var response = await _http.PostAsJsonAsync("api/subscriptions", request);
         response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<SubscriptionDto>())!;
+        return NormalizeSubscription((await response.Content.ReadFromJsonAsync<SubscriptionDto>())!);
     }
 
     public async Task<SubscriptionDto?> UpdateAsync(int id, UpdateSubscriptionRequest request)
@@ -47,7 +50,8 @@ public class SubscriptionApiService : ISubscriptionApiService
         var response = await _http.PutAsJsonAsync($"api/subscriptions/{id}", request);
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<SubscriptionDto>();
+        var subscription = await response.Content.ReadFromJsonAsync<SubscriptionDto>();
+        return subscription == null ? null : NormalizeSubscription(subscription);
     }
 
     public async Task DeleteAsync(int id)
@@ -87,59 +91,130 @@ public class SubscriptionApiService : ISubscriptionApiService
     public async Task<List<ExchangeRateSummary>> GetExchangeRatesAsync() =>
         await _http.GetFromJsonAsync<List<ExchangeRateSummary>>("api/exchangerate") ?? new();
 
-    public async Task<List<string>> GetCategoriesAsync() =>
-    await _http.GetFromJsonAsync<List<string>>("api/subscriptions/categories") ?? new();
-
-    // 백엔드에 결제 이력 테이블이 없어 진짜 과거 트렌드는 만들 수 없음.
-    // 현재 활성 구독을 모든 월에 동일한 금액으로 채운 평면 트렌드를 반환.
     public async Task<SpendingTrendsDto> GetSpendingTrendsAsync(int months = 12)
     {
-        var subs = await GetSubscriptionsAsync();
-        var active = subs.Where(s => s.IsActive).ToList();
-        var totalMonthly = active.Sum(s => s.MonthlyAmountInKRW);
+        var boundedMonths = Math.Clamp(months, 1, 24);
+        return await _http.GetFromJsonAsync<SpendingTrendsDto>(
+            $"api/subscriptions/spending-trends?months={boundedMonths}") ?? new();
+    }
 
-        var categoryBreakdown = active
-            .GroupBy(s => s.Category)
-            .Select(g => new CategorySpend
-            {
-                Category = g.Key,
-                MonthlyAmountKRW = g.Sum(x => x.MonthlyAmountInKRW),
-                Count = g.Count(),
-            })
-            .OrderByDescending(c => c.MonthlyAmountKRW)
-            .ToList();
+    private async Task RenewOverdueBillingDatesAsync(List<SubscriptionDto> subscriptions)
+    {
+        var today = DateTime.Today;
+        var renewedSubscriptions = new List<SubscriptionDto>();
 
-        var byCategory = categoryBreakdown
-            .Select(c => new CategoryMonthlyAmount
-            {
-                Category = c.Category,
-                AmountKRW = c.MonthlyAmountKRW,
-            })
-            .ToList();
-
-        var monthlyTrends = new List<MonthlyTrend>(months);
-        var thisMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-        for (var i = months - 1; i >= 0; i--)
+        foreach (var subscription in subscriptions)
         {
-            var m = thisMonth.AddMonths(-i);
-            monthlyTrends.Add(new MonthlyTrend
+            var originalDate = subscription.NextBillingDate.Date;
+            NormalizeSubscription(subscription, today);
+
+            if (subscription.IsActive && subscription.NextBillingDate.Date != originalDate)
             {
-                Month = m.ToString("yyyy-MM"),
-                Label = m.ToString("M월"),
-                TotalKRW = totalMonthly,
-                ByCategory = byCategory,
-            });
+                renewedSubscriptions.Add(subscription);
+            }
         }
 
-        return new SpendingTrendsDto
+        foreach (var subscription in renewedSubscriptions)
         {
-            MonthlyTrends = monthlyTrends,
-            CategoryBreakdown = categoryBreakdown,
-            TotalMonthlyKRW = totalMonthly,
-            TotalYearlyKRW = totalMonthly * 12,
-            ActiveCount = active.Count,
-            TopCategory = categoryBreakdown.FirstOrDefault()?.Category ?? string.Empty,
-            AverageMonthlyKRW = totalMonthly,
-        };
+            await TryPersistRenewedBillingDateAsync(subscription);
+        }
+    }
+
+    private async Task TryPersistRenewedBillingDateAsync(SubscriptionDto subscription)
+    {
+        try
+        {
+            var request = new UpdateSubscriptionRequest
+            {
+                Name = subscription.Name,
+                Category = subscription.Category,
+                Amount = subscription.Amount,
+                Currency = subscription.Currency,
+                BillingCycle = subscription.BillingCycle,
+                NextBillingDate = subscription.NextBillingDate,
+                IconEmoji = subscription.IconEmoji,
+                Notes = subscription.Notes,
+                IsActive = subscription.IsActive
+            };
+
+            var response = await _http.PutAsJsonAsync($"api/subscriptions/{subscription.Id}", request);
+            if (!response.IsSuccessStatusCode)
+            {
+                return;
+            }
+
+            var updated = await response.Content.ReadFromJsonAsync<SubscriptionDto>();
+            if (updated != null)
+            {
+                CopySubscriptionValues(updated, subscription);
+                NormalizeSubscription(subscription);
+            }
+        }
+        catch
+        {
+            // Remote persistence is best-effort; keep the corrected date in the current UI response.
+        }
+    }
+
+    private static SubscriptionDto NormalizeSubscription(SubscriptionDto subscription)
+    {
+        NormalizeSubscription(subscription, DateTime.Today);
+        return subscription;
+    }
+
+    private static void NormalizeSubscription(SubscriptionDto subscription, DateTime today)
+    {
+        if (subscription.IsActive)
+        {
+            subscription.NextBillingDate = NormalizeNextBillingDate(
+                subscription.NextBillingDate,
+                subscription.BillingCycle,
+                today);
+        }
+
+        subscription.DaysUntilBilling = (subscription.NextBillingDate.Date - today.Date).Days;
+    }
+
+    private static DateTime NormalizeNextBillingDate(
+        DateTime nextBillingDate,
+        string billingCycle,
+        DateTime today)
+    {
+        var date = nextBillingDate.Date;
+        if (date == default)
+        {
+            return today.Date;
+        }
+
+        var cycle = billingCycle.Trim().ToUpperInvariant();
+        var guard = 0;
+
+        while (date < today.Date && guard++ < 1200)
+        {
+            date = cycle switch
+            {
+                "YEARLY" => date.AddYears(1),
+                _ => date.AddMonths(1)
+            };
+        }
+
+        return date;
+    }
+
+    private static void CopySubscriptionValues(SubscriptionDto source, SubscriptionDto target)
+    {
+        target.Id = source.Id;
+        target.Name = source.Name;
+        target.Category = source.Category;
+        target.Amount = source.Amount;
+        target.Currency = source.Currency;
+        target.BillingCycle = source.BillingCycle;
+        target.NextBillingDate = source.NextBillingDate;
+        target.IconEmoji = source.IconEmoji;
+        target.Notes = source.Notes;
+        target.IsActive = source.IsActive;
+        target.AmountInKRW = source.AmountInKRW;
+        target.MonthlyAmountInKRW = source.MonthlyAmountInKRW;
+        target.DaysUntilBilling = source.DaysUntilBilling;
     }
 }
