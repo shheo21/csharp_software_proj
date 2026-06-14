@@ -83,7 +83,7 @@ public class ThemeService : IThemeService, IAsyncDisposable
     private async Task ApplyAsync()
     {
         try { await _js.InvokeVoidAsync("subTrackTheme.apply", IsDark ? "dark" : "light"); }
-        catch { /* JS 미준비 — 다음 호출에서 재시도 */ }
+        catch { /* JS 로드 안 됨 — 다음 호출에서 재시도 */ }
         OnChange?.Invoke();
     }
 
