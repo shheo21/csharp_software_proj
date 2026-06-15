@@ -1,6 +1,7 @@
 @page "/dashboard"
 @attribute [Authorize]
 @inject ISubscriptionApiService ApiService
+@inject ICategoryService CategoryService
 @inject NavigationManager Nav
 
 <PageTitle>대시보드 — SubTrack</PageTitle>
@@ -130,7 +131,6 @@
                     <!-- SVG Donut Chart -->
                     @{
                         var total = _summary.CategoryBreakdown.Sum(c => c.MonthlyAmountKRW);
-                        var colors = new[] { "#6366f1", "#4d9ef5", "#2ed573", "#ff4757", "#a29bfe", "#ffa502", "#fd79a8", "#00cec9" };
                         var segments = BuildDonutSegments(_summary.CategoryBreakdown, total);
                     }
 
@@ -139,9 +139,10 @@
                             <circle cx="100" cy="100" r="70" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="32" />
                             @foreach (var (seg, i) in segments.Select((s, i) => (s, i)))
                             {
+                                var segmentColor = CategoryService.GetColor(_summary.CategoryBreakdown[i].Category);
                                 <circle cx="100" cy="100" r="70"
                                         fill="none"
-                                        stroke="@colors[i % colors.Length]"
+                                        stroke="@segmentColor"
                                         stroke-width="32"
                                         stroke-dasharray="@seg.Dash @seg.Gap"
                                         stroke-dashoffset="@seg.Offset"
@@ -162,8 +163,9 @@
                     @foreach (var (cat, i) in _summary.CategoryBreakdown.Select((c, i) => (c, i)))
                     {
                         var pct = total > 0 ? (cat.MonthlyAmountKRW / total * 100) : 0;
+                        var catColor = CategoryService.GetColor(cat.Category);
                         <div class="d-flex align-center mb-2">
-                            <div style="width:10px; height:10px; border-radius:3px; background:@colors[i % colors.Length]; flex-shrink:0;" class="mr-2"></div>
+                            <div style="width:10px; height:10px; border-radius:3px; background:@catColor; flex-shrink:0;" class="mr-2"></div>
                             <MudText Typo="Typo.caption" Style="color: var(--text-secondary); flex-grow:1;">@cat.Category</MudText>
                             <MudText Typo="Typo.caption" Style="color: var(--text-primary); font-weight:600; margin-right:8px;">₩@cat.MonthlyAmountKRW.ToString("N0")</MudText>
                             <MudText Typo="Typo.caption" Style="color: var(--text-secondary);">@pct.ToString("F1")%</MudText>
@@ -191,6 +193,7 @@
         StateHasChanged();
         try { _summary = await ApiService.GetDashboardAsync(); }
         catch { _summary = GetMockData(); }
+        await CategoryService.EnsureLoadedAsync(_summary.CategoryBreakdown.Select(c => c.Category));
         _loading = false;
     }
 

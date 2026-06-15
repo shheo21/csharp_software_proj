@@ -127,11 +127,19 @@
                         {
                             <div class="category-item d-flex align-center pa-2 mb-2"
                                  style="background: rgba(255,255,255,0.04); border-radius: 8px;">
-                                <MudIcon Icon="@Icons.Material.Filled.Label"
-                                         Style="color: var(--text-secondary);"
-                                         Class="mr-2" Size="Size.Small" />
+                                <input type="color"
+                                       class="category-color-input"
+                                       value="@CategoryService.GetColor(cat)"
+                                       title="카테고리 색상"
+                                       @onchange="@(e => UpdateCategoryColor(cat, e.Value?.ToString()))"
+                                       style="margin-right: 10px;" />
                                 <MudText Typo="Typo.body2"
                                          Style="color: var(--text-primary); flex:1;">@cat</MudText>
+                                <MudTooltip Text="기본 색상으로 복구">
+                                    <MudIconButton Icon="@Icons.Material.Filled.RestartAlt"
+                                                   Color="Color.Default" Size="Size.Small"
+                                                   OnClick="@(() => ResetCategoryColor(cat))" />
+                                </MudTooltip>
                                 <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                                Color="Color.Default" Size="Size.Small"
                                                OnClick="@(() => DeleteCategory(cat))" />
@@ -158,6 +166,28 @@
 
     </MudGrid>
 </div>
+
+<style>
+    .category-color-input {
+        width: 28px;
+        height: 28px;
+        border: 0;
+        border-radius: 8px;
+        cursor: pointer;
+        background: transparent;
+        padding: 0;
+        flex-shrink: 0;
+    }
+
+    .category-color-input::-webkit-color-swatch-wrapper {
+        padding: 0;
+    }
+
+    .category-color-input::-webkit-color-swatch {
+        border: 1px solid rgba(255,255,255,0.18);
+        border-radius: 8px;
+    }
+</style>
 
 @code {
     // 프로필
@@ -310,6 +340,17 @@
     private async Task DeleteCategory(string name)
     {
         await CategoryService.RemoveAsync(name);
+    }
+
+    private async Task UpdateCategoryColor(string name, string? color)
+    {
+        if (string.IsNullOrWhiteSpace(color)) return;
+        await CategoryService.SetColorAsync(name, color);
+    }
+
+    private async Task ResetCategoryColor(string name)
+    {
+        await CategoryService.ResetColorAsync(name);
     }
 
 }
