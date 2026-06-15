@@ -40,6 +40,7 @@ public class SubscriptionApiService : ISubscriptionApiService
 
     public async Task<SubscriptionDto> CreateAsync(CreateSubscriptionRequest request)
     {
+        request.NextBillingDate = ToApiDate(request.NextBillingDate);
         var response = await _http.PostAsJsonAsync("api/subscriptions", request);
         response.EnsureSuccessStatusCode();
         return NormalizeSubscription((await response.Content.ReadFromJsonAsync<SubscriptionDto>())!);
@@ -47,6 +48,7 @@ public class SubscriptionApiService : ISubscriptionApiService
 
     public async Task<SubscriptionDto?> UpdateAsync(int id, UpdateSubscriptionRequest request)
     {
+        request.NextBillingDate = ToApiDate(request.NextBillingDate);
         var response = await _http.PutAsJsonAsync($"api/subscriptions/{id}", request);
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
         response.EnsureSuccessStatusCode();
@@ -216,5 +218,10 @@ public class SubscriptionApiService : ISubscriptionApiService
         target.AmountInKRW = source.AmountInKRW;
         target.MonthlyAmountInKRW = source.MonthlyAmountInKRW;
         target.DaysUntilBilling = source.DaysUntilBilling;
+    }
+
+    private static DateTime ToApiDate(DateTime date)
+    {
+        return DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
     }
 }
