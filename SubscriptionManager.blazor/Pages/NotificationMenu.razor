@@ -79,7 +79,11 @@
     </MudPopover>
 </div>
 
-<MudOverlay Visible="@_isOpen" OnClick="CloseMenu" Class="transparent-click-overlay" ZIndex="9998" />
+<MudOverlay Visible="@_isOpen"
+            OnClick="CloseMenu"
+            Class="transparent-click-overlay"
+            LockScroll="false"
+            ZIndex="9998" />
 
 <style>
     .notification-menu-root {

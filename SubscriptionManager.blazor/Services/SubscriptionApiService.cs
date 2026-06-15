@@ -154,7 +154,7 @@ public class SubscriptionApiService : ISubscriptionApiService
         }
         catch
         {
-            // Remote persistence is best-effort; keep the corrected date in the current UI response.
+            // 백엔드에서 구독 목록 저장 실패 시 현재 UI에서만 반영
         }
     }
 

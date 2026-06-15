@@ -29,7 +29,7 @@
                         style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:2px;">
                         @cur.Code</div>
                         <div style="font-size:1.1rem; font-weight:800; color:var(--gold-400);">
-                            ₩@cur.Rate.ToString("N0")
+                            ₩@cur.Rate.ToString("N2")
                         </div>
                         <div style="font-size:0.7rem; color:var(--text-secondary);">1 @cur.Code</div>
                     </div>
@@ -72,7 +72,7 @@
                                 매매 기준율 (원/1단위)
                             </MudTableSortLabel>
                         </MudTh>
-                        <MudTh>시각화</MudTh>
+                        <MudTh>원화 기준</MudTh>
                         <MudTh>갱신 시각</MudTh>
                     </HeaderContent>
                     <RowTemplate>
@@ -91,19 +91,18 @@
                         </MudTd>
                         <MudTd>
                             @{
-                                var pct = _maxRate > 0 ? (double)(context.RateToKRW / _maxRate) : 0;
+                                var barPct = GetKrwLogScalePercent(context.RateToKRW);
+                                var relativePct = GetKrwRelativePercent(context.RateToKRW);
                             }
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <div
-                                    style="height:6px; border-radius:3px; background:var(--navy-600); width:120px; overflow:hidden;">
-                                    <div style="height:100%; border-radius:3px; width:@(pct * 100)%;
-                                    background: linear-gradient(90deg, var(--gold-500), var(--accent-blue));
-                                    transition: width 0.6s ease;"></div>
+                            <div class="krw-scale-bar" title="중앙값 환율을 100%로 한 로그 스케일 위치">
+                                <div class="krw-scale-track">
+                                    <div class="krw-scale-midline"></div>
+                                    <div class="krw-scale-fill"
+                                         style="width:@FormatCssPercent(barPct)%;"></div>
                                 </div>
-                                <span style="font-size:0.72rem; color:var(--text-secondary);">@((pct *
-                                                                100).ToString("F0"))%</span>
-                                </div>
-                            </MudTd>
+                                <span class="krw-scale-value">@FormatRelativePercent(relativePct)</span>
+                            </div>
+                        </MudTd>
                             <MudTd Style="font-size:0.8rem; color:var(--text-secondary);">
                                 @context.UpdatedAt.ToString("HH:mm:ss")
                             </MudTd>
@@ -154,6 +153,51 @@
             </div>
         </div>
 
+<style>
+    .krw-scale-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 190px;
+    }
+
+    .krw-scale-track {
+        position: relative;
+        width: 132px;
+        height: 7px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: var(--navy-600);
+    }
+
+    .krw-scale-midline {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        width: 1px;
+        background: rgba(255,255,255,0.38);
+        z-index: 1;
+    }
+
+    .krw-scale-fill {
+        height: 100%;
+        min-width: 3px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--gold-500), var(--accent-blue));
+        transition: width 0.6s ease;
+    }
+
+    .krw-scale-value {
+        color: var(--text-secondary);
+        font-size: 0.72rem;
+        font-weight: 700;
+        line-height: 1;
+        min-width: 48px;
+        white-space: nowrap;
+    }
+</style>
+
 @code {
     private static readonly string[] HighlightedCurrencyCodes = ["USD", "EUR", "JPY", "GBP", "CAD", "AUD"];
 
@@ -193,7 +237,8 @@
     private string _rateSearch = "";
     private string _fromCurrency = "USD";
     private decimal _convertAmount = 10;
-    private decimal _maxRate = 1;
+    private decimal _krwMedianRate = 1m;
+    private double _maxLogDistance = 1d;
 
     private record CurrencyHighlight(string Code, string Flag, decimal Rate);
     private List<CurrencyHighlight> _highlighted = new();
@@ -217,6 +262,7 @@
             _rates = GetFallbackRates();
             RebuildRateIndex();
             EnsureSelectedCurrency();
+            RebuildKrwScale();
             BuildHighlighted();
             _loading = false;
         }
@@ -238,7 +284,7 @@
         }
         RebuildRateIndex();
         EnsureSelectedCurrency();
-        _maxRate = _rates.Any() ? _rates.Max(r => r.RateToKRW) : 1;
+        RebuildKrwScale();
         BuildHighlighted();
         _loading = false;
     }
@@ -264,6 +310,37 @@
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
     }
 
+    private void RebuildKrwScale()
+    {
+        var positiveRates = _rates
+            .Where(r => r.RateToKRW > 0)
+            .Select(r => r.RateToKRW)
+            .OrderBy(r => r)
+            .ToList();
+
+        if (positiveRates.Count == 0)
+        {
+            _krwMedianRate = 1m;
+            _maxLogDistance = 1d;
+            return;
+        }
+
+        var middle = positiveRates.Count / 2;
+        _krwMedianRate = positiveRates.Count % 2 == 0
+            ? (positiveRates[middle - 1] + positiveRates[middle]) / 2m
+            : positiveRates[middle];
+
+        _maxLogDistance = positiveRates
+            .Select(rate => Math.Abs(Math.Log((double)(rate / _krwMedianRate))))
+            .DefaultIfEmpty(1d)
+            .Max();
+
+        if (_maxLogDistance <= 0)
+        {
+            _maxLogDistance = 1d;
+        }
+    }
+
     private void EnsureSelectedCurrency()
     {
         if (_ratesByCode.ContainsKey(_fromCurrency))
@@ -278,6 +355,44 @@
 
     private decimal GetRate(string code) =>
         _ratesByCode.TryGetValue(code.Trim(), out var rate) ? rate.RateToKRW : 0m;
+
+    private double GetKrwLogScalePercent(decimal rateToKRW)
+    {
+        if (rateToKRW <= 0 || _krwMedianRate <= 0)
+        {
+            return 0;
+        }
+
+        var logDistance = Math.Log((double)(rateToKRW / _krwMedianRate));
+        var percent = 50d + (logDistance / _maxLogDistance * 50d);
+
+        return Math.Clamp(percent, 0d, 100d);
+    }
+
+    private decimal GetKrwRelativePercent(decimal rateToKRW) =>
+        _krwMedianRate > 0 ? rateToKRW / _krwMedianRate * 100m : 0m;
+
+    private static string FormatCssPercent(double value) =>
+        value.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+
+    private static string FormatRelativePercent(decimal percent)
+    {
+        if (percent <= 0)
+        {
+            return "0%";
+        }
+
+        if (percent < 0.1m)
+        {
+            return "<0.1%";
+        }
+
+        return percent switch
+        {
+            < 10m => $"{percent:N1}%",
+            _ => $"{percent:N0}%"
+        };
+    }
 
     private static string GetFlag(string code) =>
         CurrencyFlags.TryGetValue(code.Trim(), out var flag) ? flag : "¤";
