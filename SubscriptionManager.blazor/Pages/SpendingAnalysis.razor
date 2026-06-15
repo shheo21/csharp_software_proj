@@ -588,7 +588,7 @@
     }
 
     .category-share-track {
-        background: rgba(255,255,255,0.06);
+        background: color-mix(in srgb, var(--text-secondary) 18%, transparent);
         border-radius: 10px;
         height: 6px;
         overflow: hidden;
@@ -625,7 +625,7 @@
     }
 
     .category-table-share-track {
-        background: rgba(255,255,255,0.06);
+        background: color-mix(in srgb, var(--text-secondary) 18%, transparent);
         border-radius: 10px;
         height: 6px;
         overflow: hidden;
@@ -855,6 +855,7 @@
         var yAxisFontSize = 10;
         var valueFontSize = 9;
         var rotateMonthLabels = months > 12;
+        var chartTextHalo = "paint-order:stroke;stroke:var(--surface-elevated);stroke-width:4px;stroke-linejoin:round;";
 
         var sb = new System.Text.StringBuilder();
         sb.Append($"<svg viewBox=\"0 0 {svgW} {svgH}\" width=\"100%\" class=\"trend-chart-svg\">");
@@ -877,7 +878,7 @@
             var yVal = maxVal * g / 4;
             var yPos = marginTop + plotH - (plotH * g / 4);
             sb.Append($"<line x1=\"{marginLeft}\" y1=\"{yPos}\" x2=\"{marginLeft + plotW}\" y2=\"{yPos}\" stroke=\"rgba(255,255,255,0.06)\" stroke-width=\"1\"/>");
-            sb.Append($"<text x=\"{marginLeft - 10}\" y=\"{yPos + 4}\" text-anchor=\"end\" style=\"fill:var(--text-secondary);font-size:{yAxisFontSize}px;font-family:Pretendard;font-weight:500;\">{FormatCompact((decimal)yVal)}</text>");
+            sb.Append($"<text x=\"{marginLeft - 10}\" y=\"{yPos + 4}\" text-anchor=\"end\" style=\"fill:var(--text-secondary);font-size:{yAxisFontSize}px;font-family:Pretendard;font-weight:700;{chartTextHalo}\">{FormatCompact((decimal)yVal)}</text>");
         }
 
         for (int i = 0; i < trends.Count; i++)
@@ -890,22 +891,22 @@
             var fill = isCurrent ? "url(#barGradCurrent)" : "url(#barGrad)";
             var labelColor = isCurrent ? "var(--gold-400)" : "var(--text-secondary)";
             var labelWeight = isCurrent ? "700" : "400";
-            var valColor = isCurrent ? "var(--gold-300)" : "var(--text-secondary)";
+            var valColor = isCurrent ? "var(--gold-400)" : "var(--text-primary)";
             var labelX = x + barW / 2;
             var labelY = marginTop + plotH + 24;
 
             sb.Append($"<rect x=\"{x}\" y=\"{y:F1}\" width=\"{barW}\" height=\"{(barH > 0 ? barH : 0):F1}\" fill=\"{fill}\" rx=\"4\" style=\"transition:opacity 0.2s;\"/>");
 
             if (trend.TotalKRW > 0 && (months <= 12 || isCurrent))
-                sb.Append($"<text x=\"{x + barW / 2}\" y=\"{Math.Max(12, y - 7):F1}\" text-anchor=\"middle\" style=\"fill:{valColor};font-size:{valueFontSize}px;font-family:Pretendard;font-weight:{labelWeight};\">₩{FormatCompact(trend.TotalKRW)}</text>");
+                sb.Append($"<text x=\"{x + barW / 2}\" y=\"{Math.Max(12, y - 7):F1}\" text-anchor=\"middle\" style=\"fill:{valColor};font-size:{valueFontSize}px;font-family:Pretendard;font-weight:800;{chartTextHalo}\">₩{FormatCompact(trend.TotalKRW)}</text>");
 
             if (rotateMonthLabels)
             {
-                sb.Append($"<text x=\"{labelX}\" y=\"{labelY}\" text-anchor=\"end\" transform=\"rotate(-45 {labelX} {labelY})\" style=\"fill:{labelColor};font-size:{xAxisFontSize}px;font-family:Pretendard;font-weight:{labelWeight};\">{trend.Label}</text>");
+                sb.Append($"<text x=\"{labelX}\" y=\"{labelY}\" text-anchor=\"end\" transform=\"rotate(-45 {labelX} {labelY})\" style=\"fill:{labelColor};font-size:{xAxisFontSize}px;font-family:Pretendard;font-weight:700;{chartTextHalo}\">{trend.Label}</text>");
             }
             else
             {
-                sb.Append($"<text x=\"{labelX}\" y=\"{labelY}\" text-anchor=\"middle\" style=\"fill:{labelColor};font-size:{xAxisFontSize}px;font-family:Pretendard;font-weight:{labelWeight};\">{trend.Label}</text>");
+                sb.Append($"<text x=\"{labelX}\" y=\"{labelY}\" text-anchor=\"middle\" style=\"fill:{labelColor};font-size:{xAxisFontSize}px;font-family:Pretendard;font-weight:700;{chartTextHalo}\">{trend.Label}</text>");
             }
         }
 
