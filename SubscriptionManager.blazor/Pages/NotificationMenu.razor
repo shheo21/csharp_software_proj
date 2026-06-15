@@ -16,7 +16,7 @@
     }
 
     <MudPopover Open="@_isOpen" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Class="glass-popover-menu" Fixed="false">
-        <div class="notification-popover glass-card pa-4">
+        <div class="notification-popover pa-4">
             <div class="notification-popover-header">
                 <div class="d-flex align-center">
                     <MudIcon Icon="@Icons.Material.Filled.NotificationsActive" Style="color: var(--gold-400);" Class="mr-2" Size="Size.Small" />
@@ -45,7 +45,7 @@
                 </div>
             </div>
             
-            <MudDivider Style="background-color: rgba(255,255,255,0.08); margin: 12px 0;" />
+            <MudDivider Class="notification-divider" />
 
             <div style="max-height: 300px; overflow-y: auto;" class="custom-scrollbar">
                 @if (_loading)
@@ -122,8 +122,8 @@
 
     .notification-popover {
         width: 340px;
-        border: none;
-        border-radius: 12px;
+        background: transparent;
+        color: var(--text-primary);
     }
 
     .notification-popover-header {
@@ -150,6 +150,15 @@
         font-size: 0.8rem;
     }
 
+    .notification-days-input .mud-input-outlined-border {
+        border-color: color-mix(in srgb, var(--text-secondary) 22%, transparent) !important;
+    }
+
+    .notification-days-input .mud-disabled .mud-input-outlined-border,
+    .notification-days-input .mud-input:disabled ~ .mud-input-outlined-border {
+        border-color: color-mix(in srgb, var(--text-secondary) 16%, transparent) !important;
+    }
+
     .notification-days-label {
         color: var(--text-secondary);
         font-size: 0.75rem;
@@ -162,7 +171,17 @@
     }
 
     .glass-popover-menu {
+        background: var(--navy-800) !important;
+        border: 1px solid color-mix(in srgb, var(--text-secondary) 22%, transparent) !important;
+        border-radius: 12px !important;
+        box-shadow: 0 16px 42px rgba(0,0,0,0.22) !important;
+        overflow: hidden;
         z-index: 9999 !important;
+    }
+
+    .notification-divider {
+        margin: 12px 0 !important;
+        background-color: color-mix(in srgb, var(--text-secondary) 20%, transparent) !important;
     }
 
     .transparent-click-overlay {
