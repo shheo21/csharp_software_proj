@@ -38,12 +38,19 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Configure API base URL
+      - name: Configure Blazor app
         shell: bash
         run: |
           if [[ -z "${API_BASE_URL}" ]]; then
             echo "API_BASE_URL is not set in the github-pages environment variables." >&2
             exit 1
+          fi
+
+          repo_name="${GITHUB_REPOSITORY#*/}"
+          if [[ "${repo_name}" == "${GITHUB_REPOSITORY_OWNER}.github.io" ]]; then
+            base_href="/"
+          else
+            base_href="/${repo_name}/"
           fi
 
           cat > SubscriptionManager.blazor/wwwroot/appsettings.json <<EOF
@@ -52,20 +59,14 @@ jobs:
           }
           EOF
 
+          sed -i "s|<base href=\"/\" />|<base href=\"${base_href}\" />|" SubscriptionManager.blazor/wwwroot/index.html
+
       - name: Publish Blazor WebAssembly
         run: dotnet publish SubscriptionManager.blazor/SubscriptionManager.blazor.csproj --configuration Release --output publish
 
       - name: Prepare GitHub Pages artifact
         shell: bash
         run: |
-          repo_name="${GITHUB_REPOSITORY#*/}"
-          if [[ "${repo_name}" == "${GITHUB_REPOSITORY_OWNER}.github.io" ]]; then
-            base_href="/"
-          else
-            base_href="/${repo_name}/"
-          fi
-
-          sed -i "s|<base href=\"/\" />|<base href=\"${base_href}\" />|" publish/wwwroot/index.html
           cp publish/wwwroot/index.html publish/wwwroot/404.html
           touch publish/wwwroot/.nojekyll
 
