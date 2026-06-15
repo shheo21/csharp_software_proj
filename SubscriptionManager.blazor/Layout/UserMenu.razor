@@ -63,7 +63,11 @@
     </MudPopover>
 </div>
 
-<MudOverlay Visible="@_isOpen" OnClick="CloseMenu" Background="transparent" ZIndex="9998" />
+<MudOverlay Visible="@_isOpen"
+            OnClick="CloseMenu"
+            Class="transparent-click-overlay"
+            LockScroll="false"
+            ZIndex="9998" />
 
 <style>
     .glass-user-menu {
@@ -87,6 +91,14 @@
     }
     .user-menu-item-danger:hover {
         background-color: rgba(248, 113, 113, 0.08);
+    }
+    .transparent-click-overlay {
+        background: transparent !important;
+        backdrop-filter: none !important;
+    }
+    .transparent-click-overlay .mud-overlay-scrim {
+        background: transparent !important;
+        backdrop-filter: none !important;
     }
 </style>
 

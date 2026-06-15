@@ -46,40 +46,53 @@
                 </div>
 
                 <MudForm @ref="_profileForm" @bind-IsValid="_profileValid">
-                    <MudGrid>
-                        <MudItem xs="12" md="6">
+                    <div style="display:flex; align-items:flex-start; gap:16px; flex-wrap:wrap; max-width:760px;">
+                        <div style="flex:1 1 420px; min-width:280px;">
                             <MudTextField T="string" @bind-Value="_displayName"
                                           Label="표시 이름" Variant="Variant.Outlined"
                                           Required="true" RequiredError="표시 이름을 입력하세요" />
-                        </MudItem>
+                        </div>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                   Style="margin-top:10px; flex:0 0 auto;"
+                                   Disabled="@(!_profileValid || _profileSaving)"
+                                   OnClick="SaveProfile">
+                            @(_profileSaving ? "저장 중..." : "표시 이름 저장")
+                        </MudButton>
+                    </div>
+                </MudForm>
 
+                <MudDivider Style="background-color: rgba(255,255,255,0.08); margin: 28px 0 22px;" />
+
+                <MudGrid>
                         <MudItem xs="12">
                             <MudText Typo="Typo.subtitle2"
-                                     Style="color: var(--text-secondary);" Class="mt-2">
-                                비밀번호 변경 (선택)
+                                     Style="color: var(--text-secondary);">
+                                비밀번호 변경
                             </MudText>
                         </MudItem>
                         <MudItem xs="12" md="6">
                             <MudTextField T="string" @bind-Value="_currentPassword"
                                           Label="현재 비밀번호" InputType="InputType.Password"
+                                          Required="true" RequiredError="현재 비밀번호를 입력하세요"
                                           Variant="Variant.Outlined" />
                         </MudItem>
                         <MudItem xs="12" md="6">
                             <MudTextField T="string" @bind-Value="_newPassword"
                                           Label="새 비밀번호" InputType="InputType.Password"
+                                          Required="true" RequiredError="새 비밀번호를 입력하세요"
                                           Variant="Variant.Outlined"
                                           Validation="@(new Func<string, IEnumerable<string>>(ValidatePassword))" />
                         </MudItem>
+                        <MudItem xs="12">
+                            <div class="d-flex justify-end mt-2">
+                                <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                                           Disabled="@(!CanChangePassword || _passwordSaving)"
+                                           OnClick="ChangePassword">
+                                    @(_passwordSaving ? "변경 중..." : "비밀번호 변경")
+                                </MudButton>
+                            </div>
+                        </MudItem>
                     </MudGrid>
-
-                    <div class="d-flex justify-end mt-4">
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                                   Disabled="@(!_profileValid || _profileSaving)"
-                                   OnClick="SaveProfile">
-                            @(_profileSaving ? "저장 중..." : "저장")
-                        </MudButton>
-                    </div>
-                </MudForm>
             </div>
         </MudItem>
 
@@ -151,6 +164,7 @@
     private MudForm _profileForm = null!;
     private bool _profileValid;
     private bool _profileSaving;
+    private bool _passwordSaving;
     private string _displayName = string.Empty;
     private string _email = string.Empty;
     private string _initial = "U";
@@ -160,6 +174,11 @@
     // 카테고리 (CategoryService 가 공유 상태 보관)
     private bool _categoriesLoading = true;
     private string _newCategory = string.Empty;
+
+    private bool CanChangePassword =>
+        !string.IsNullOrWhiteSpace(_currentPassword) &&
+        !string.IsNullOrWhiteSpace(_newPassword) &&
+        _newPassword.Length >= 8;
 
     protected override async Task OnInitializedAsync()
     {
@@ -203,16 +222,76 @@
 
     private async Task SaveProfile()
     {
+        if (_profileForm != null)
+        {
+            await _profileForm.ValidateAsync();
+        }
+
+        if (!_profileValid)
+        {
+            return;
+        }
+
         _profileSaving = true;
         try
         {
-            await Task.Delay(200);
-            _currentPassword = string.Empty;
-            _newPassword = string.Empty;
-            Snackbar.Add("프로필이 저장되었습니다 (백엔드 미구현 — UI 검증만 동작)", Severity.Info);
+            var result = await AuthService.UpdateProfileAsync(new UpdateProfileRequest
+            {
+                DisplayName = _displayName
+            });
+
+            if (!result.Success)
+            {
+                Snackbar.Add(result.Error ?? "프로필 저장에 실패했습니다.", Severity.Error);
+                return;
+            }
+
+            _displayName = _displayName.Trim();
+            _initial = !string.IsNullOrWhiteSpace(_displayName)
+                ? _displayName.Substring(0, 1).ToUpperInvariant()
+                : "U";
+            Snackbar.Add("프로필이 저장되었습니다", Severity.Success);
         }
         catch (Exception ex) { Snackbar.Add($"저장 실패: {ex.Message}", Severity.Error); }
         finally { _profileSaving = false; }
+    }
+
+    private async Task ChangePassword()
+    {
+        if (string.IsNullOrWhiteSpace(_currentPassword) ||
+            string.IsNullOrWhiteSpace(_newPassword))
+        {
+            Snackbar.Add("현재 비밀번호와 새 비밀번호를 입력하세요", Severity.Warning);
+            return;
+        }
+
+        if (_newPassword.Length < 8)
+        {
+            Snackbar.Add("비밀번호는 8자 이상이어야 합니다", Severity.Warning);
+            return;
+        }
+
+        _passwordSaving = true;
+        try
+        {
+            var result = await AuthService.ChangePasswordAsync(new ChangePasswordRequest
+            {
+                CurrentPassword = _currentPassword,
+                NewPassword = _newPassword
+            });
+
+            if (!result.Success)
+            {
+                Snackbar.Add(result.Error ?? "비밀번호 변경에 실패했습니다.", Severity.Error);
+                return;
+            }
+
+            _currentPassword = string.Empty;
+            _newPassword = string.Empty;
+            Snackbar.Add("비밀번호가 변경되었습니다", Severity.Success);
+        }
+        catch (Exception ex) { Snackbar.Add($"변경 실패: {ex.Message}", Severity.Error); }
+        finally { _passwordSaving = false; }
     }
 
     private async Task AddCategory()

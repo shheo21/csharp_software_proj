@@ -63,6 +63,36 @@ public class AuthController : ControllerBase
     }
 
     [Authorize]
+    [HttpPut("profile")]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest req)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+            return Unauthorized(new { message = "유저를 찾을 수 없습니다." });
+
+        var (profile, error) = await _authService.UpdateProfileAsync(userId, req);
+        if (profile == null)
+            return BadRequest(new { message = error });
+
+        return Ok(profile);
+    }
+
+    [Authorize]
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest req)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+            return Unauthorized(new { message = "유저를 찾을 수 없습니다." });
+
+        var (auth, error) = await _authService.ChangePasswordAsync(userId, req);
+        if (auth == null)
+            return BadRequest(new { message = error });
+
+        return Ok(auth);
+    }
+
+    [Authorize]
     [HttpPost("logout")]
     public async Task<IActionResult> Logout([FromBody] RefreshRequest req)
     {

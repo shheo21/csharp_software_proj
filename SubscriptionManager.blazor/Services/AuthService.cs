@@ -12,6 +12,8 @@ public interface IAuthService
     Task LogoutAsync();
     Task<UserInfo?> GetCurrentUserAsync();
     Task<bool> RefreshAsync();
+    Task<(bool Success, string? Error)> UpdateProfileAsync(UpdateProfileRequest request);
+    Task<(bool Success, string? Error)> ChangePasswordAsync(ChangePasswordRequest request);
 }
 
 public class AuthService : IAuthService
@@ -117,6 +119,44 @@ public class AuthService : IAuthService
         }
     }
 
+    public async Task<(bool Success, string? Error)> UpdateProfileAsync(UpdateProfileRequest request)
+    {
+        try
+        {
+            var response = await _http.PutAsJsonAsync("api/auth/profile", request);
+            if (!response.IsSuccessStatusCode)
+                return (false, await TryParseError(response) ?? "프로필 저장에 실패했습니다.");
+
+            var profile = await response.Content.ReadFromJsonAsync<UserProfileResponse>();
+            if (profile == null) return (false, "응답 처리 오류");
+
+            await UpdateStoredProfileAsync(profile);
+            _authStateProvider.NotifyAuthStateChanged();
+
+            return (true, null);
+        }
+        catch (Exception ex) { return (false, ex.Message); }
+    }
+
+    public async Task<(bool Success, string? Error)> ChangePasswordAsync(ChangePasswordRequest request)
+    {
+        try
+        {
+            var response = await _http.PostAsJsonAsync("api/auth/change-password", request);
+            if (!response.IsSuccessStatusCode)
+                return (false, await TryParseError(response) ?? "비밀번호 변경에 실패했습니다.");
+
+            var auth = await response.Content.ReadFromJsonAsync<AuthResponse>();
+            if (auth == null) return (false, "응답 처리 오류");
+
+            await SaveUserAsync(auth);
+            _authStateProvider.NotifyAuthStateChanged();
+
+            return (true, null);
+        }
+        catch (Exception ex) { return (false, ex.Message); }
+    }
+
     public async Task<UserInfo?> GetCurrentUserAsync()
     {
         var user = await GetCurrentUserFromStorageAsync();
@@ -150,6 +190,18 @@ public class AuthService : IAuthService
         await _js.InvokeVoidAsync("localStorage.setItem", TOKEN_KEY, auth.Token);
         await _js.InvokeVoidAsync("localStorage.setItem", USER_KEY,
             JsonSerializer.Serialize(userInfo));
+    }
+
+    private async Task UpdateStoredProfileAsync(UserProfileResponse profile)
+    {
+        var user = await GetCurrentUserFromStorageAsync();
+        if (user == null) return;
+
+        user.DisplayName = profile.DisplayName;
+        user.Email = profile.Email;
+
+        await _js.InvokeVoidAsync("localStorage.setItem", USER_KEY,
+            JsonSerializer.Serialize(user));
     }
 
     private static async Task<string?> TryParseError(HttpResponseMessage response)
