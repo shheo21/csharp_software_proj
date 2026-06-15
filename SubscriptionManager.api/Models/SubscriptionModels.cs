@@ -17,6 +17,7 @@ public class SubscriptionDto
     public decimal Amount { get; set; }
     public string Currency { get; set; } = string.Empty;
     public string BillingCycle { get; set; } = string.Empty;
+    public DateTime StartDate { get; set; }
     public DateTime NextBillingDate { get; set; }
     public string? IconEmoji { get; set; }
     public string? Notes { get; set; }
@@ -44,6 +45,8 @@ public class CreateSubscriptionRequest
 
     [System.ComponentModel.DataAnnotations.RegularExpression("^(MONTHLY|YEARLY)$", ErrorMessage = "결제 주기는 MONTHLY 또는 YEARLY여야 합니다.")]
     public string BillingCycle { get; set; } = "MONTHLY";
+
+    public DateTime? StartDate { get; set; }
 
     [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "다음 결제일은 필수입니다.")]
     public DateTime NextBillingDate { get; set; }

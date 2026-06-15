@@ -8,6 +8,7 @@ public class SubscriptionDto
     public decimal Amount { get; set; }
     public string Currency { get; set; } = "KRW";
     public string BillingCycle { get; set; } = "MONTHLY";
+    public DateTime StartDate { get; set; } = DateTime.Today;
     public DateTime NextBillingDate { get; set; }
     public string? IconEmoji { get; set; }
     public string? Notes { get; set; }
@@ -39,6 +40,7 @@ public class CreateSubscriptionRequest
     public decimal Amount { get; set; }
     public string Currency { get; set; } = "KRW";
     public string BillingCycle { get; set; } = "MONTHLY";
+    public DateTime StartDate { get; set; } = DateTime.Today;
     public DateTime NextBillingDate { get; set; } = DateTime.Now.AddMonths(1);
     public string? IconEmoji { get; set; }
     public string? Notes { get; set; }

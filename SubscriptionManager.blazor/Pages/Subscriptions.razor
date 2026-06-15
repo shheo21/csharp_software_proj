@@ -133,7 +133,7 @@
         @if (_viewMode == "list")
         {
             <div class="glass-card fade-in-up fade-in-up-3" style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse; min-width: 950px;">
+                <table style="width: 100%; border-collapse: collapse; min-width: 1040px;">
                     <thead>
                         <tr style="border-bottom: 1px solid rgba(255,255,255,0.08); color: var(--text-secondary); font-size: 0.85rem;">
                             <th style="padding: 16px 24px; text-align: left; font-weight: 500;">서비스</th>
@@ -141,6 +141,7 @@
                             <th style="padding: 16px 8px; text-align: left; font-weight: 500;">결제 금액</th>
                             <th style="padding: 16px 8px; text-align: left; font-weight: 500;">원화 환산</th>
                             <th style="padding: 16px 8px; text-align: center; font-weight: 500;">주기</th>
+                            <th style="padding: 16px 8px; text-align: center; font-weight: 500;">시작일</th>
                             <th style="padding: 16px 8px; text-align: center; font-weight: 500;">다음 결제일</th>
                             <th style="padding: 16px 8px; text-align: center; font-weight: 500;">D-DAY</th>
                             <th style="padding: 16px 8px; text-align: center; font-weight: 500;">상태</th>
@@ -172,6 +173,7 @@
                                 <td style="padding: 16px 8px; text-align: center;">
                                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Style="color: #52c41a; border-color: rgba(82,196,26,0.5); background: rgba(82,196,26,0.05);">@(sub.BillingCycle == "MONTHLY" ? "월간" : "연간")</MudChip>
                                 </td>
+                                <td style="padding: 16px 8px; text-align: center; color: var(--text-secondary); font-weight: 500; font-size: 0.86rem;">@sub.StartDate.ToString("yyyy.MM.dd")</td>
                                 <td style="padding: 16px 8px; text-align: center; color: var(--text-primary); font-weight: 500; font-size: 0.9rem;">@sub.NextBillingDate.ToString("yyyy.MM.dd")</td>
                                 <td style="padding: 16px 8px; text-align: center;">
                                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Style="@GetDDayChipStyle(sub.DaysUntilBilling)">@sub.DaysLabel</MudChip>
@@ -293,11 +295,11 @@
         var fileName = _exportFileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase) ? _exportFileName : $"{_exportFileName}.csv";
         var sb = new System.Text.StringBuilder();
         sb.Append('\uFEFF');
-        sb.AppendLine("서비스 이름,카테고리,원화 환산 금액,결제 주기");
+        sb.AppendLine("서비스 이름,카테고리,원화 환산 금액,결제 주기,구독 시작일,다음 결제일");
 
         foreach (var sub in FilteredSubscriptions)
         {
-            sb.AppendLine($"\"{sub.Name}\",\"{sub.Category}\",{sub.AmountInKRW},{(sub.BillingCycle == "MONTHLY" ? "월간" : "연간")}");
+            sb.AppendLine($"\"{sub.Name}\",\"{sub.Category}\",{sub.AmountInKRW},{(sub.BillingCycle == "MONTHLY" ? "월간" : "연간")},{sub.StartDate:yyyy.MM.dd},{sub.NextBillingDate:yyyy.MM.dd}");
         }
 
         var base64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(sb.ToString()));
@@ -426,6 +428,7 @@
         Amount = sub.Amount,
         Currency = sub.Currency,
         BillingCycle = sub.BillingCycle,
+        StartDate = sub.StartDate,
         NextBillingDate = sub.NextBillingDate,
         IconEmoji = sub.IconEmoji,
         Notes = sub.Notes,
@@ -436,5 +439,5 @@
     
     private string GetDDayChipStyle(int days) => days <= 3 ? "color: #ff4d4f; border-color: rgba(255,77,79,0.5); background: rgba(255,77,79,0.05);" : days <= 7 ? "color: #faad14; border-color: rgba(250,173,20,0.5); background: rgba(250,173,20,0.05);" : "color: #52c41a; border-color: rgba(82,196,26,0.5); background: rgba(82,196,26,0.05);";
     
-    private List<SubscriptionDto> GetMockSubscriptions() => new() { new() { Id=1, Name="Netflix", Category="엔터테인먼트", Currency="KRW", Amount=17000, AmountInKRW=17000, MonthlyAmountInKRW=17000, BillingCycle="MONTHLY", NextBillingDate=DateTime.Now.AddDays(5), DaysUntilBilling=5, IconEmoji="🎬", IsActive=true }, new() { Id=2, Name="Adobe Creative Cloud", Category="창작 도구", Currency="USD", Amount=54.99m, AmountInKRW=75886, MonthlyAmountInKRW=75886, BillingCycle="MONTHLY", NextBillingDate=DateTime.Now.AddDays(12), DaysUntilBilling=12, IconEmoji="🎨", IsActive=true }, new() { Id=3, Name="CLIP STUDIO PAINT", Category="창작 도구", Currency="KRW", Amount=4800, AmountInKRW=4800, MonthlyAmountInKRW=400, BillingCycle="YEARLY", NextBillingDate=DateTime.Now.AddDays(45), DaysUntilBilling=45, IconEmoji="✏️", IsActive=true }, new() { Id=4, Name="Spotify", Category="음악", Currency="USD", Amount=10.99m, AmountInKRW=15166, MonthlyAmountInKRW=15166, BillingCycle="MONTHLY", NextBillingDate=DateTime.Now.AddDays(3), DaysUntilBilling=3, IconEmoji="🎵", IsActive=true }, new() { Id=5, Name="GitHub Copilot", Category="개발 도구", Currency="USD", Amount=10m, AmountInKRW=13800, MonthlyAmountInKRW=13800, BillingCycle="MONTHLY", NextBillingDate=DateTime.Now.AddDays(20), DaysUntilBilling=20, IconEmoji="💻", IsActive=true } };
+    private List<SubscriptionDto> GetMockSubscriptions() => new() { new() { Id=1, Name="Netflix", Category="엔터테인먼트", Currency="KRW", Amount=17000, AmountInKRW=17000, MonthlyAmountInKRW=17000, BillingCycle="MONTHLY", StartDate=DateTime.Today.AddMonths(-6), NextBillingDate=DateTime.Now.AddDays(5), DaysUntilBilling=5, IconEmoji="🎬", IsActive=true }, new() { Id=2, Name="Adobe Creative Cloud", Category="창작 도구", Currency="USD", Amount=54.99m, AmountInKRW=75886, MonthlyAmountInKRW=75886, BillingCycle="MONTHLY", StartDate=DateTime.Today.AddMonths(-4), NextBillingDate=DateTime.Now.AddDays(12), DaysUntilBilling=12, IconEmoji="🎨", IsActive=true }, new() { Id=3, Name="CLIP STUDIO PAINT", Category="창작 도구", Currency="KRW", Amount=4800, AmountInKRW=4800, MonthlyAmountInKRW=400, BillingCycle="YEARLY", StartDate=DateTime.Today.AddYears(-1), NextBillingDate=DateTime.Now.AddDays(45), DaysUntilBilling=45, IconEmoji="✏️", IsActive=true }, new() { Id=4, Name="Spotify", Category="음악", Currency="USD", Amount=10.99m, AmountInKRW=15166, MonthlyAmountInKRW=15166, BillingCycle="MONTHLY", StartDate=DateTime.Today.AddMonths(-5), NextBillingDate=DateTime.Now.AddDays(3), DaysUntilBilling=3, IconEmoji="🎵", IsActive=true }, new() { Id=5, Name="GitHub Copilot", Category="개발 도구", Currency="USD", Amount=10m, AmountInKRW=13800, MonthlyAmountInKRW=13800, BillingCycle="MONTHLY", StartDate=DateTime.Today.AddMonths(-2), NextBillingDate=DateTime.Now.AddDays(20), DaysUntilBilling=20, IconEmoji="💻", IsActive=true } };
 }

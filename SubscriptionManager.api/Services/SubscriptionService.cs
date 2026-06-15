@@ -48,6 +48,7 @@ public class SubscriptionService
     public async Task<SubscriptionDto> CreateSubscriptionAsync(string userId, CreateSubscriptionRequest req)
     {
         var billingCycle = req.BillingCycle.Trim().ToUpper();
+        var nextBillingDate = NormalizeBillingDate(req.NextBillingDate, billingCycle);
         var subscription = new Subscription
         {
             UserId = userId,
@@ -56,7 +57,8 @@ public class SubscriptionService
             Amount = req.Amount,
             Currency = req.Currency.Trim().ToUpper(),
             BillingCycle = billingCycle,
-            NextBillingDate = NormalizeBillingDate(req.NextBillingDate, billingCycle),
+            StartDate = NormalizeStartDate(req.StartDate, nextBillingDate),
+            NextBillingDate = nextBillingDate,
             IconEmoji = req.IconEmoji,
             Notes = req.Notes?.Trim(),
             IsActive = true,
@@ -83,9 +85,11 @@ public class SubscriptionService
         subscription.Amount = req.Amount;
         subscription.Currency = req.Currency.Trim().ToUpper();
         subscription.BillingCycle = req.BillingCycle.Trim().ToUpper();
-        subscription.NextBillingDate = req.IsActive
+        var nextBillingDate = req.IsActive
             ? NormalizeBillingDate(req.NextBillingDate, subscription.BillingCycle)
             : ToStorageDate(req.NextBillingDate);
+        subscription.StartDate = NormalizeStartDate(req.StartDate, nextBillingDate);
+        subscription.NextBillingDate = nextBillingDate;
         subscription.IconEmoji = req.IconEmoji;
         subscription.Notes = req.Notes?.Trim();
         subscription.IsActive = req.IsActive;
@@ -154,6 +158,22 @@ public class SubscriptionService
             DateTime.UtcNow.Date);
 
         return ToStorageDate(normalizedDate);
+    }
+
+    private static DateTime NormalizeStartDate(DateTime? startDate, DateTime nextBillingDate)
+    {
+        var date = startDate?.Date ?? DateTime.UtcNow.Date;
+        if (date == default)
+        {
+            date = DateTime.UtcNow.Date;
+        }
+
+        if (date > nextBillingDate.Date)
+        {
+            date = nextBillingDate.Date;
+        }
+
+        return ToStorageDate(date);
     }
 
     private static DateTime ToStorageDate(DateTime date)

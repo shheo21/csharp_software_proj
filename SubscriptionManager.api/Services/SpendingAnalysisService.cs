@@ -61,13 +61,13 @@ public class SpendingAnalysisService : ISpendingAnalysisService
                 var subscription = item.Subscription;
                 var dto = item.Dto;
 
-                var createdMonth = new DateTime(
-                    subscription.CreatedAt.Year,
-                    subscription.CreatedAt.Month,
+                var startMonth = new DateTime(
+                    subscription.StartDate.Year,
+                    subscription.StartDate.Month,
                     1);
 
-                // 구독이 생성되기 전 월은 정보가 없는 과거이므로 0 처리
-                if (month < createdMonth)
+                // 실제 구독 시작일 이전 월은 지출이 없는 기간으로 처리
+                if (month < startMonth)
                 {
                     continue;
                 }

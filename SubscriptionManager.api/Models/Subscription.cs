@@ -17,6 +17,7 @@ public class Subscription
     // "MONTHLY", "YEARLY"
     public string BillingCycle { get; set; } = "MONTHLY";
 
+    public DateTime StartDate { get; set; } = DateTime.UtcNow.Date;
     public DateTime NextBillingDate { get; set; }
 
     public string? IconEmoji { get; set; }
