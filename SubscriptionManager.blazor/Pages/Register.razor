@@ -94,7 +94,7 @@
         <div class="text-center">
             <MudText Typo="Typo.body2" Style="color: var(--text-secondary);">
                 이미 계정이 있으신가요?
-                <MudLink Href="/login" Style="color: var(--gold-400); font-weight:600; text-decoration:none;">
+                <MudLink Href="login" Style="color: var(--gold-400); font-weight:600; text-decoration:none;">
                     로그인
                 </MudLink>
             </MudText>
@@ -196,7 +196,7 @@
             _success = true;
             StateHasChanged();
             await Task.Delay(1500);
-            Nav.NavigateTo("/login");
+            Nav.NavigateTo("login");
         }
         else
         {

@@ -168,13 +168,13 @@
     private void GoToSettings()
     {
         CloseMenu();
-        Navigation.NavigateTo("/settings");
+        Navigation.NavigateTo("settings");
     }
 
     private async Task HandleLogout()
     {
         CloseMenu();
         await AuthService.LogoutAsync();
-        Navigation.NavigateTo("/login", forceLoad: true);
+        Navigation.NavigateTo("login", forceLoad: true);
     }
 }

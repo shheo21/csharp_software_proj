@@ -68,7 +68,7 @@
         <div class="text-center">
             <MudText Typo="Typo.body2" Style="color: var(--text-secondary);">
                 계정이 없으신가요?
-                <MudLink Href="/register" Style="color: var(--gold-400); font-weight:600; text-decoration:none;">
+                <MudLink Href="register" Style="color: var(--gold-400); font-weight:600; text-decoration:none;">
                     회원가입
                 </MudLink>
             </MudText>
@@ -172,10 +172,10 @@
         var uri = new Uri(Nav.Uri);
         var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
         var raw = query["returnUrl"];
-        if (string.IsNullOrWhiteSpace(raw)) return "/dashboard";
+        if (string.IsNullOrWhiteSpace(raw)) return "dashboard";
 
         // 절대 URL/스킴 주입 차단 — 상대 경로만 허용
-        if (raw.Contains("://") || raw.StartsWith("//")) return "/dashboard";
-        return raw.StartsWith("/") ? raw : "/" + raw;
+        if (raw.Contains("://") || raw.StartsWith("//")) return "dashboard";
+        return raw.TrimStart('/');
     }
 }
