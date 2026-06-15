@@ -210,33 +210,36 @@ SubscriptionManager.api/
 
 # SubscriptionManager Blazor
 
-구독 관리 웹페이지를 제공하는 Blazor 프로젝트입니다.
+구독 서비스의 비용, 결제 일정, 지출 흐름을 한 곳에서 관리하는 웹 프론트엔드입니다.
 
-## 프론트엔드 API 설정
+## 주요 화면
 
-Blazor WASM은 `SubscriptionManager.blazor/wwwroot/appsettings.json`의 `ApiBaseUrl` 값을 읽어 백엔드 API 기본 주소로 사용합니다.
+### 대시보드
 
-```json
-{
-  "ApiBaseUrl": "${API_BASE_URL}"
-}
-```
+이번 달 구독 지출과 결제 예정 항목을 한눈에 확인할 수 있습니다. 카테고리별 지출 비중도 함께 보여줍니다.
 
-배포용 `appsettings.json`은 placeholder를 유지하고, GitHub Pages workflow에서 빌드 전에 `API_BASE_URL` 값으로 치환합니다. `API_BASE_URL`은 비밀값이 아니므로 GitHub Actions Secret보다 Variable을 권장합니다.
+![대시보드](images/dashboard.png)
 
-```yaml
-- name: Inject API base URL
-  shell: bash
-  env:
-    API_BASE_URL: ${{ vars.API_BASE_URL }}
-  run: |
-    sed -i "s|\${API_BASE_URL}|$API_BASE_URL|g" SubscriptionManager.blazor/wwwroot/appsettings.json
-```
+### 구독 관리
 
-GitHub Actions Variable 예시:
+사용 중인 구독 서비스를 등록하고, 금액·통화·결제 주기·다음 결제일을 관리할 수 있습니다. 검색과 필터로 원하는 구독을 빠르게 찾을 수 있습니다.
 
-```text
-API_BASE_URL=https://subscriptionmanager-api.onrender.com
-```
+![구독 관리](images/subscription_management.png)
 
-로컬 개발에서는 `SubscriptionManager.blazor/wwwroot/appsettings.Development.json`이 `https://localhost:7188`을 사용합니다.
+### 일정
+
+다가오는 결제일을 일정 화면에서 확인할 수 있습니다. 월별로 어떤 구독이 언제 결제되는지 쉽게 파악할 수 있습니다.
+
+![일정](images/schedule.png)
+
+### 지출 분석
+
+구독 비용의 월별 흐름과 카테고리별 비중을 확인할 수 있습니다. 어떤 분야에 지출이 집중되는지 비교하기 좋습니다.
+
+![지출 분석](images/spending_analysis.png)
+
+### 환율 정보
+
+해외 구독 서비스 비용을 원화 기준으로 비교할 수 있도록 주요 통화의 환율 정보를 제공합니다.
+
+![환율 정보](images/exchange_rates.png)
