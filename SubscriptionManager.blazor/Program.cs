@@ -14,8 +14,7 @@ public class Program
         builder.RootComponents.Add<App>("#app");
         builder.RootComponents.Add<HeadOutlet>("head::after");
 
-        var apiBaseUrl = builder.Configuration["ApiBaseUrl"]
-            ?? throw new InvalidOperationException("ApiBaseUrl이 설정되지 않았습니다.");
+        var apiBaseUrl = NormalizeApiBaseUrl(builder.Configuration["ApiBaseUrl"]);
 
         builder.Services.AddScoped<AuthMessageHandler>();
         builder.Services.AddScoped(sp =>
@@ -24,7 +23,7 @@ public class Program
             authHandler.InnerHandler = new HttpClientHandler();
             return new HttpClient(authHandler)
             {
-                BaseAddress = new Uri(apiBaseUrl)
+                BaseAddress = apiBaseUrl
             };
         });
 
@@ -46,5 +45,17 @@ public class Program
         builder.Services.AddMudServices();
 
         await builder.Build().RunAsync();
+    }
+
+    private static Uri NormalizeApiBaseUrl(string? apiBaseUrl)
+    {
+        if (string.IsNullOrWhiteSpace(apiBaseUrl))
+            throw new InvalidOperationException("ApiBaseUrl이 설정되지 않았습니다.");
+
+        var normalized = apiBaseUrl.Trim().TrimEnd('/') + "/";
+        if (!Uri.TryCreate(normalized, UriKind.Absolute, out var uri))
+            throw new InvalidOperationException($"ApiBaseUrl이 올바른 URL이 아닙니다: {apiBaseUrl}");
+
+        return uri;
     }
 }

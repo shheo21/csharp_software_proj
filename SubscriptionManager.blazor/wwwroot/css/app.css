@@ -250,6 +250,64 @@ body, html {
 
 .mud-chip { border-radius: 8px !important; }
 
+/* Keep MudSwitch thumbs inside the track instead of protruding above it. */
+.mud-switch .mud-switch-span,
+.mud-switch .mud-switch-span-medium {
+    position: relative !important;
+    display: inline-block !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 24px !important;
+    flex: 0 0 44px !important;
+}
+
+.mud-switch .mud-switch-track {
+    position: absolute !important;
+    inset: 0 auto auto 0 !important;
+    width: 44px !important;
+    height: 24px !important;
+    border-radius: 999px !important;
+    background-color: rgba(107,114,128,0.55) !important;
+    opacity: 1 !important;
+}
+
+.mud-switch .mud-switch-base {
+    position: absolute !important;
+    top: 3px !important;
+    left: 3px !important;
+    width: 18px !important;
+    height: 18px !important;
+    padding: 0 !important;
+    z-index: 1 !important;
+}
+
+.mud-switch .mud-switch-base.mud-checked {
+    transform: translateX(20px) !important;
+}
+
+.mud-switch .mud-switch-button,
+.mud-switch [class*="mud-switch-thumb"] {
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+}
+
+.mud-switch .mud-switch-button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.mud-switch [class*="mud-switch-thumb"] {
+    border-radius: 50% !important;
+    background-color: #ffffff !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.28) !important;
+}
+
+.mud-switch .mud-switch-base.mud-checked + .mud-switch-track {
+    background-color: var(--gold-500) !important;
+}
+
 .mud-button-filled-primary {
     background: linear-gradient(135deg, var(--gold-500), #4f46e5) !important;
     color: #fff !important;

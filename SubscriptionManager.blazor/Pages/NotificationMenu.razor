@@ -2,19 +2,47 @@
 @inject ISubscriptionApiService ApiService
 @inject IJSRuntime JS
 
-<div style="margin-right: 18px; position: relative; display: inline-block;">
-    
-    <MudBadge Content="@_badgeCount" Color="Color.Error" Overlap="true" Visible="@(_badgeCount > 0 && _alarmEnabled)" Class="naver-badge">
-        <MudIconButton Icon="@Icons.Material.Filled.Notifications" 
-                       Color="Color.Inherit" 
-                       OnClick="ToggleMenu" />
-    </MudBadge>
+<div class="notification-menu-root">
+    <MudIconButton Icon="@Icons.Material.Filled.Notifications" 
+                   Color="Color.Inherit"
+                   Class="notification-bell-button"
+                   OnClick="ToggleMenu" />
+
+    @if (_badgeCount > 0 && _alarmEnabled)
+    {
+        <span class="notification-count-badge" aria-label="@($"읽지 않은 알림 {_badgeCount}개")">
+            @_badgeCount
+        </span>
+    }
 
     <MudPopover Open="@_isOpen" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Class="glass-popover-menu" Fixed="false">
-        <div class="glass-card pa-4" style="width: 340px; border: none; border-radius: 12px;">
-            <div class="d-flex align-center mb-1">
-                <MudIcon Icon="@Icons.Material.Filled.NotificationsActive" Style="color: var(--gold-400);" Class="mr-2" Size="Size.Small" />
-                <MudText Typo="Typo.subtitle2" Style="font-weight:700; color: var(--text-primary);">알림</MudText>
+        <div class="notification-popover glass-card pa-4">
+            <div class="notification-popover-header">
+                <div class="d-flex align-center">
+                    <MudIcon Icon="@Icons.Material.Filled.NotificationsActive" Style="color: var(--gold-400);" Class="mr-2" Size="Size.Small" />
+                    <MudText Typo="Typo.subtitle2" Style="font-weight:700; color: var(--text-primary);">알림</MudText>
+                </div>
+
+                <div class="notification-settings-strip">
+                    <MudNumericField T="int"
+                                     Value="_reminderDays"
+                                     ValueChanged="SetReminderDays"
+                                     Min="1"
+                                     Max="30"
+                                     Variant="Variant.Outlined"
+                                     Margin="Margin.Dense"
+                                     Disabled="@(!_alarmEnabled)"
+                                     HideSpinButtons="true"
+                                     Class="notification-days-input"
+                                     aria-label="알림 임계일" />
+                    <span class="notification-days-label">일 전</span>
+                    <MudSwitch T="bool"
+                               Value="_alarmEnabled"
+                               ValueChanged="SetAlarmEnabled"
+                               Color="Color.Primary"
+                               Class="notification-settings-switch"
+                               aria-label="알림 받기" />
+                </div>
             </div>
             
             <MudDivider Style="background-color: rgba(255,255,255,0.08); margin: 12px 0;" />
@@ -41,7 +69,7 @@
                                 <div class="sub-icon-small mr-2">@(sub.IconEmoji ?? "📦")</div>
                                 <div style="font-weight:600; color: var(--text-primary); font-size: 0.9rem;">@sub.Name</div>
                                 <MudSpacer />
-                                <div class="dday-text" style="color: var(--accent-red); font-size: 0.75rem; font-weight: 700;">D-@sub.DaysUntilBilling</div>
+                                <div class="dday-text" style="color: var(--accent-red); font-size: 0.75rem; font-weight: 700;">@sub.DaysLabel</div>
                             </div>
                         </div>
                     }
@@ -51,14 +79,121 @@
     </MudPopover>
 </div>
 
+<MudOverlay Visible="@_isOpen"
+            OnClick="CloseMenu"
+            Class="transparent-click-overlay"
+            LockScroll="false"
+            ZIndex="9998" />
+
+<style>
+    .notification-menu-root {
+        width: 40px;
+        height: 40px;
+        margin-right: 14px;
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .notification-bell-button {
+        width: 40px;
+        height: 40px;
+    }
+
+    .notification-count-badge {
+        position: absolute;
+        top: 3px;
+        right: 3px;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        border-radius: 999px;
+        border: 2px solid var(--appbar-background, #07070e);
+        background: var(--accent-red, #f87171);
+        color: #ffffff;
+        font-size: 0.68rem;
+        font-weight: 800;
+        line-height: 14px;
+        text-align: center;
+        pointer-events: none;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+    }
+
+    .notification-popover {
+        width: 340px;
+        border: none;
+        border-radius: 12px;
+    }
+
+    .notification-popover-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .notification-settings-strip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+    }
+
+    .notification-days-input {
+        width: 64px;
+    }
+
+    .notification-days-input .mud-input-root {
+        min-height: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+    }
+
+    .notification-days-label {
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .notification-settings-switch {
+        margin-left: 0;
+    }
+
+    .glass-popover-menu {
+        z-index: 9999 !important;
+    }
+
+    .transparent-click-overlay {
+        background: transparent !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+
+    .transparent-click-overlay .mud-overlay-scrim {
+        background: transparent !important;
+        opacity: 0 !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+</style>
+
 @code {
     private bool _isOpen = false;
     private bool _alarmEnabled = true;
     private int _reminderDays = 7;
     private bool _loading = true;
     private List<SubscriptionDto> _upcoming = new();
+    private const string KeyNotiEnabled = "subtrack_noti_enabled";
+    private const string KeyNotiDays = "subtrack_noti_days";
     
     private int _badgeCount => _alarmEnabled ? _upcoming.Count : 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSettingsAndData();
+    }
 
     private async Task ToggleMenu() 
     { 
@@ -66,20 +201,70 @@
         if (_isOpen) await LoadSettingsAndData();
     }
 
+    private void CloseMenu() => _isOpen = false;
+
+    private async Task SetAlarmEnabled(bool enabled)
+    {
+        if (_alarmEnabled == enabled)
+        {
+            return;
+        }
+
+        _alarmEnabled = enabled;
+        _loading = enabled;
+
+        if (!enabled)
+        {
+            _upcoming.Clear();
+        }
+
+        await JS.InvokeVoidAsync("localStorage.setItem", KeyNotiEnabled, enabled ? "true" : "false");
+
+        if (!enabled)
+        {
+            _loading = false;
+            return;
+        }
+
+        await LoadSettingsAndData();
+    }
+
+    private async Task SetReminderDays(int days)
+    {
+        var normalizedDays = Math.Clamp(days, 1, 30);
+        if (_reminderDays == normalizedDays)
+        {
+            return;
+        }
+
+        _reminderDays = normalizedDays;
+        if (_alarmEnabled)
+        {
+            _loading = true;
+        }
+
+        await JS.InvokeVoidAsync("localStorage.setItem", KeyNotiDays, normalizedDays.ToString());
+        await LoadSettingsAndData();
+    }
+
     private async Task LoadSettingsAndData()
     {
         _loading = true;
-        
-        // 1. 설정값 불러오기 (Settings.razor와 동일한 로컬스토리지 키 사용)
-        var enabledStr = await JS.InvokeAsync<string?>("localStorage.getItem", "subtrack_noti_enabled");
-        _alarmEnabled = enabledStr == null || enabledStr == "true";
-        
-        var daysStr = await JS.InvokeAsync<string?>("localStorage.getItem", "subtrack_noti_days");
-        _reminderDays = int.TryParse(daysStr, out int d) ? d : 7;
 
-        // 2. 데이터 필터링
         try
         {
+            var enabledStr = await JS.InvokeAsync<string?>("localStorage.getItem", KeyNotiEnabled);
+            _alarmEnabled = enabledStr == null || enabledStr == "true";
+            
+            var daysStr = await JS.InvokeAsync<string?>("localStorage.getItem", KeyNotiDays);
+            _reminderDays = int.TryParse(daysStr, out int d) ? d : 7;
+
+            if (!_alarmEnabled)
+            {
+                _upcoming.Clear();
+                return;
+            }
+
             var summary = await ApiService.GetDashboardAsync();
             _upcoming = summary.UpcomingBilling
                                .Where(u => u.DaysUntilBilling <= _reminderDays) // 설정값 적용

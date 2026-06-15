@@ -1,7 +1,8 @@
 @page "/schedule"
-@*attribute [Authorize]*@
+@attribute [Authorize]
+@implements IDisposable
 @inject ISubscriptionApiService ApiService
-@inject IJSRuntime JS
+@inject ICategoryService CategoryService
 @inject ISnackbar Snackbar
 
 <PageTitle>일정 — SubTrack</PageTitle>
@@ -245,25 +246,12 @@
     
     private List<SubscriptionDto> _subscriptions = new();
     private List<string> _uniqueCategories = new();
-    
-    // 카테고리별 색상을 저장할 딕셔너리
-    private Dictionary<string, string> _categoryColors = new();
-    private const string KeyColors = "subtrack_calendar_colors";
-
-    // 기본 색상 팔레트
-    private readonly Dictionary<string, string> _defaultColors = new()
-    {
-        { "엔터테인먼트", "#ff4d4f" }, // Red
-        { "음악", "#b37feb" },        // Purple
-        { "창작 도구", "#ff75c3" },   // Pink
-        { "개발 도구", "#69c0ff" },   // Blue
-        { "기타", "#52c41a" }         // Green
-    };
 
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
-        await LoadColors();
+        await CategoryService.EnsureLoadedAsync(_uniqueCategories);
+        CategoryService.OnChange += OnCategorySettingsChanged;
         GenerateCalendar();
     }
 
@@ -282,51 +270,25 @@
         _uniqueCategories = _subscriptions.Select(s => s.Category).Distinct().ToList();
     }
 
-    // 색상 관련 로직
-    private async Task LoadColors()
-    {
-        try
-        {
-            var savedColorsJson = await JS.InvokeAsync<string?>("localStorage.getItem", KeyColors);
-            if (!string.IsNullOrEmpty(savedColorsJson))
-            {
-                _categoryColors = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(savedColorsJson) ?? new();
-            }
-        }
-        catch { }
-    }
-
-    private async Task SaveColors()
-    {
-        try
-        {
-            var json = System.Text.Json.JsonSerializer.Serialize(_categoryColors);
-            await JS.InvokeVoidAsync("localStorage.setItem", KeyColors, json);
-        }
-        catch { }
-    }
-
     private async Task UpdateCategoryColor(string category, string? newColor)
     {
         if (string.IsNullOrEmpty(newColor)) return;
-        _categoryColors[category] = newColor;
-        await SaveColors();
-        StateHasChanged();
+        await CategoryService.SetColorAsync(category, newColor);
     }
 
     private async Task ResetColors()
     {
-        _categoryColors.Clear();
-        await SaveColors();
+        await CategoryService.ResetColorsAsync();
         Snackbar.Add("기본 색상으로 복구되었습니다.", Severity.Success);
-        StateHasChanged();
     }
 
-    private string GetCategoryColor(string category)
+    private string GetCategoryColor(string category) => CategoryService.GetColor(category);
+
+    private void OnCategorySettingsChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
     {
-        if (_categoryColors.TryGetValue(category, out var savedColor)) return savedColor;
-        if (_defaultColors.TryGetValue(category, out var defaultColor)) return defaultColor;
-        return "#ffffff"; // 기본 흰색
+        CategoryService.OnChange -= OnCategorySettingsChanged;
     }
 
     // 캘린더 생성 로직

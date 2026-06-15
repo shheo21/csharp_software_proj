@@ -1,22 +1,52 @@
 @page "/spending-analysis"
-@*attribute [Authorize]*@
+@attribute [Authorize]
 @inject ISubscriptionApiService ApiService
+@inject ICategoryService CategoryService
 
 <PageTitle>지출 분석 — SubTrack</PageTitle>
 
 <div class="fade-in-up">
     <!-- Header -->
-    <div class="d-flex align-center justify-space-between mb-6">
+    <div class="spending-page-header mb-6">
         <div>
             <div class="page-title">지출 분석</div>
             <div class="page-subtitle">카테고리별 · 월별 지출 추이 분석</div>
         </div>
-        <MudButton Variant="Variant.Outlined"
-                   Style="border-radius:12px; font-weight:600; border-color:var(--border-subtle); color:var(--text-secondary);"
-                   StartIcon="@Icons.Material.Filled.Refresh"
-                   OnClick="LoadData">
-            새로고침
-        </MudButton>
+        <div class="spending-page-actions">
+            <div class="period-control" aria-label="분석 기간 선택">
+                <button type="button"
+                        class="period-option @GetPeriodButtonClass(3)"
+                        @onclick="() => SetMonths(3)">
+                    3개월
+                </button>
+                <button type="button"
+                        class="period-option @GetPeriodButtonClass(6)"
+                        @onclick="() => SetMonths(6)">
+                    6개월
+                </button>
+                <button type="button"
+                        class="period-option @GetPeriodButtonClass(12)"
+                        @onclick="() => SetMonths(12)">
+                    12개월
+                </button>
+                <label class="custom-period-entry @(IsCustomPeriod ? "active" : null)">
+                    <span class="custom-period-label">직접 입력</span>
+                    <input class="custom-period-input"
+                           type="number"
+                           min="1"
+                           max="24"
+                           value="@_customMonths"
+                           @onchange="ApplyCustomMonths" />
+                    <span>개월</span>
+                </label>
+            </div>
+            <MudButton Variant="Variant.Outlined"
+                       Style="border-radius:12px; font-weight:600; border-color:var(--border-subtle); color:var(--text-secondary);"
+                       StartIcon="@Icons.Material.Filled.Refresh"
+                       OnClick="LoadData">
+                새로고침
+            </MudButton>
+        </div>
     </div>
 
     @if (_loading)
@@ -29,7 +59,7 @@
     {
         <!-- KPI Cards -->
         <MudGrid Spacing="3" Class="mb-5">
-            <MudItem xs="12" sm="6" md="3" Class="fade-in-up fade-in-up-1">
+            <MudItem xs="12" sm="6" md="6" lg="3" Class="fade-in-up fade-in-up-1">
                 <div class="stat-card pa-5 d-flex flex-column" style="min-height:120px; position:relative; overflow:hidden;">
                     <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;
                                 border-radius:50%;background:radial-gradient(circle,rgba(99,102,241,0.1),transparent);"></div>
@@ -43,7 +73,7 @@
                 </div>
             </MudItem>
 
-            <MudItem xs="12" sm="6" md="3" Class="fade-in-up fade-in-up-2">
+            <MudItem xs="12" sm="6" md="6" lg="3" Class="fade-in-up fade-in-up-2">
                 <div class="stat-card pa-5 d-flex flex-column" style="min-height:120px;">
                     <div class="stat-label mb-2">연간 예상 지출</div>
                     <div class="stat-value">₩@_data.TotalYearlyKRW.ToString("N0")</div>
@@ -53,7 +83,7 @@
                 </div>
             </MudItem>
 
-            <MudItem xs="12" sm="6" md="3" Class="fade-in-up fade-in-up-3">
+            <MudItem xs="12" sm="6" md="6" lg="3" Class="fade-in-up fade-in-up-3">
                 <div class="stat-card pa-5 d-flex flex-column" style="min-height:120px;">
                     <div class="stat-label mb-2">평균 월 지출</div>
                     <div class="stat-value" style="color:var(--accent-green);">
@@ -65,7 +95,7 @@
                 </div>
             </MudItem>
 
-            <MudItem xs="12" sm="6" md="3" Class="fade-in-up fade-in-up-4">
+            <MudItem xs="12" sm="6" md="6" lg="3" Class="fade-in-up fade-in-up-4">
                 <div class="stat-card pa-5 d-flex flex-column" style="min-height:120px;">
                     <div class="stat-label mb-2">최다 지출 카테고리</div>
                     <div class="stat-value" style="color:var(--accent-orange); font-size:1.4rem;">
@@ -82,71 +112,99 @@
         <MudGrid Spacing="3" Class="mb-5">
 
             <!-- Detailed Donut Chart -->
-            <MudItem xs="12" md="5" Class="fade-in-up fade-in-up-2">
-                <div class="glass-card pa-5" style="height:100%;">
-                    <div class="d-flex align-center mb-4">
+            <MudItem xs="12" lg="5" Class="fade-in-up fade-in-up-2">
+                <div class="glass-card pa-5 spending-chart-card category-chart-card">
+                    <div class="d-flex align-center mb-4 analysis-card-header">
                         <MudIcon Icon="@Icons.Material.Filled.DonutSmall" Style="color:var(--gold-400);" Class="mr-2" />
-                        <MudText Typo="Typo.h6" Style="font-weight:700;color:var(--text-primary);">카테고리별 지출</MudText>
+                        <MudText Typo="Typo.h6" Class="analysis-card-title">카테고리별 지출</MudText>
                     </div>
 
                     @{
                         var total = _data.CategoryBreakdown.Sum(c => c.MonthlyAmountKRW);
-                        var colors = new[] { "#6366f1","#4d9ef5","#2ed573","#ff4757","#a29bfe","#ffa502","#fd79a8","#00cec9","#55efc4","#e17055" };
                         var segments = BuildDonutSegments(_data.CategoryBreakdown, total);
+                        var centerLabel = _donutHover?.Category ?? "월 합계";
+                        var centerValue = _donutHover is null
+                            ? $"₩{FormatCompact(total)}"
+                            : $"₩{FormatCompact(_donutHover.AmountKRW)}";
+                        var centerSub = _donutHover is null
+                            ? $"{_data.CategoryBreakdown.Count}개 카테고리"
+                            : $"{_donutHover.Percent:F1}% · {_donutHover.Count}개";
+                        var centerColor = _donutHover?.Color ?? "var(--gold-400)";
                     }
 
-                    <div class="d-flex justify-center mb-4">
-                        <svg viewBox="0 0 220 220" width="200" height="200"
-                             style="filter:drop-shadow(0 4px 24px rgba(0,0,0,0.5));">
+                    <div class="donut-chart-wrap">
+                        @if (_donutHover is not null)
+                        {
+                            <div class="donut-hover-card" style="border-color:@_donutHover.Color;">
+                                <div class="donut-hover-title">
+                                    <span class="donut-hover-dot" style="background:@_donutHover.Color;"></span>
+                                    @_donutHover.Category
+                                </div>
+                                <div class="donut-hover-meta">
+                                    ₩@_donutHover.AmountKRW.ToString("N0") · @_donutHover.Percent.ToString("F1")%
+                                </div>
+                            </div>
+                        }
+                        <svg viewBox="0 0 220 220" class="donut-chart">
                             <circle cx="110" cy="110" r="80" fill="none"
                                     stroke="rgba(255,255,255,0.04)" stroke-width="36" />
                             @foreach (var (seg, i) in segments.Select((s, i) => (s, i)))
                             {
+                                var cat = _data.CategoryBreakdown[i];
+                                var pct = total > 0 ? (cat.MonthlyAmountKRW / total * 100) : 0;
+                                var segmentColor = CategoryService.GetColor(cat.Category);
+                                var aria = $"{cat.Category}: 월 ₩{cat.MonthlyAmountKRW:N0}, {pct:F1}%";
                                 <circle cx="110" cy="110" r="80"
                                         fill="none"
-                                        stroke="@colors[i % colors.Length]"
+                                        stroke="@segmentColor"
                                         stroke-width="36"
                                         stroke-dasharray="@seg.Dash @seg.Gap"
                                         stroke-dashoffset="@seg.Offset"
                                         style="transform-origin:110px 110px; opacity:0.9; cursor:pointer;"
-                                        class="donut-seg" />
+                                        class="donut-seg"
+                                        tabindex="0"
+                                        role="img"
+                                        aria-label="@aria"
+                                        @onmouseenter="() => ShowDonutSegment(cat, total, segmentColor)"
+                                        @onmouseleave="ClearDonutSegment"
+                                        @onfocus="() => ShowDonutSegment(cat, total, segmentColor)"
+                                        @onblur="ClearDonutSegment">
+                                    <title>@aria</title>
+                                </circle>
                             }
-                            @((MarkupString)$"""
-                                <text x="110" y="103" text-anchor="middle"
-                                      style="fill:var(--text-secondary);font-size:9px;font-family:Pretendard;">월 합계</text>
-                                <text x="110" y="120" text-anchor="middle"
-                                      style="fill:var(--gold-400);font-size:14px;font-weight:800;font-family:Pretendard;">₩{FormatCompact(total)}</text>
-                                <text x="110" y="133" text-anchor="middle"
-                                      style="fill:var(--text-secondary);font-size:8px;font-family:Pretendard;">{_data.CategoryBreakdown.Count}개 카테고리</text>
-                            """)
+                            <text x="110" y="99" text-anchor="middle" class="donut-center-label">
+                                @centerLabel
+                            </text>
+                            <text x="110" y="120" text-anchor="middle" class="donut-center-value" style="fill:@centerColor;">
+                                @centerValue
+                            </text>
+                            <text x="110" y="137" text-anchor="middle" class="donut-center-sub">
+                                @centerSub
+                            </text>
                         </svg>
                     </div>
 
                     @foreach (var (cat, i) in _data.CategoryBreakdown.Select((c, i) => (c, i)))
                     {
                         var pct = total > 0 ? (cat.MonthlyAmountKRW / total * 100) : 0;
-                        <div class="d-flex align-center mb-2 py-1"
-                             style="border-bottom:1px solid rgba(255,255,255,0.04);">
-                            <div style="width:12px;height:12px;border-radius:3px;
-                                        background:@colors[i % colors.Length];flex-shrink:0;" class="mr-2"></div>
-                            <MudText Typo="Typo.body2"
-                                     Style="color:var(--text-secondary);flex-grow:1;font-size:0.82rem;">
+                        var catColor = CategoryService.GetColor(cat.Category);
+                        <div class="category-breakdown-row">
+                            <div class="category-color-dot" style="background:@catColor;"></div>
+                            <MudText Typo="Typo.body2" Class="category-name">
                                 @cat.Category
                             </MudText>
-                            <MudText Typo="Typo.caption"
-                                     Style="color:var(--text-secondary);margin-right:8px;font-size:0.75rem;">
+                            <MudText Typo="Typo.caption" Class="category-count">
                                 @(cat.Count)개
                             </MudText>
-                            <MudText Typo="Typo.body2"
-                                     Style="color:var(--text-primary);font-weight:600;margin-right:8px;font-size:0.85rem;min-width:70px;text-align:right;">
+                            <MudText Typo="Typo.body2" Class="category-amount">
                                 ₩@cat.MonthlyAmountKRW.ToString("N0")
                             </MudText>
-                            <div style="width:60px;">
-                                <div style="background:rgba(255,255,255,0.06);border-radius:10px;height:5px;overflow:hidden;">
-                                    <div style="width:@((double)pct)%;height:100%;border-radius:10px;
-                                                background:@colors[i % colors.Length];opacity:0.8;"></div>
+                            <div class="category-share">
+                                <div class="category-share-track">
+                                    <div class="category-share-fill"
+                                         style="width:@((double)pct)%;background:@catColor;"></div>
                                 </div>
-                                <div style="font-size:0.68rem;color:var(--text-secondary);text-align:right;margin-top:1px;">
+                                <div class="category-share-text">
                                     @pct.ToString("F1")%
                                 </div>
                             </div>
@@ -156,30 +214,16 @@
             </MudItem>
 
             <!-- Monthly Trend Chart -->
-            <MudItem xs="12" md="7" Class="fade-in-up fade-in-up-3">
-                <div class="glass-card pa-5" style="height:100%;">
-                    <div class="d-flex align-center mb-4">
+            <MudItem xs="12" lg="7" Class="fade-in-up fade-in-up-3">
+                <div class="glass-card pa-5 spending-chart-card trend-chart-card">
+                    <div class="d-flex align-center mb-4 analysis-card-header">
                         <MudIcon Icon="@Icons.Material.Filled.BarChart" Style="color:var(--gold-400);" Class="mr-2" />
-                        <MudText Typo="Typo.h6" Style="font-weight:700;color:var(--text-primary);">월별 지출 추이</MudText>
-                        <MudSpacer />
-                        <div style="display:flex;background:rgba(255,255,255,0.04);
-                                    border:1px solid rgba(255,255,255,0.08);border-radius:10px;overflow:hidden;">
-                            <div @onclick='() => SetMonths(6)'
-                                 style="padding:5px 14px;font-size:0.78rem;font-weight:600;cursor:pointer;transition:all 0.2s;
-                                        @(_selectedMonths == 6 ? "background:rgba(99,102,241,0.15);color:var(--gold-400);" : "color:var(--text-secondary);")"
-                                 class="period-btn">
-                                6개월
-                            </div>
-                            <div @onclick='() => SetMonths(12)'
-                                 style="padding:5px 14px;font-size:0.78rem;font-weight:600;cursor:pointer;transition:all 0.2s;
-                                        @(_selectedMonths == 12 ? "background:rgba(99,102,241,0.15);color:var(--gold-400);" : "color:var(--text-secondary);")"
-                                 class="period-btn">
-                                12개월
-                            </div>
-                        </div>
+                        <MudText Typo="Typo.h6" Class="analysis-card-title">월별 지출 추이</MudText>
                     </div>
 
-                    @((MarkupString)BuildTrendChartSvg(_data.MonthlyTrends, _selectedMonths))
+                    <div class="trend-chart-frame">
+                        @((MarkupString)BuildTrendChartSvg(_data.MonthlyTrends, _selectedMonths))
+                    </div>
 
                     @{
                         var visibleTrends = _data.MonthlyTrends.TakeLast(_selectedMonths).ToList();
@@ -188,24 +232,24 @@
                     {
                         var highest = visibleTrends.OrderByDescending(t => t.TotalKRW).First();
                         var lowest = visibleTrends.Where(t => t.TotalKRW > 0).OrderBy(t => t.TotalKRW).FirstOrDefault();
-                        <div class="d-flex gap-4 mt-3 pt-3" style="border-top:1px solid rgba(255,255,255,0.06);">
-                            <div>
-                                <div style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;">최고</div>
-                                <div style="font-size:0.88rem;font-weight:700;color:var(--accent-red);">₩@highest.TotalKRW.ToString("N0")</div>
-                                <div style="font-size:0.72rem;color:var(--text-secondary);">@highest.Label</div>
+                        <div class="trend-summary mt-3 pt-3">
+                            <div class="trend-summary-item">
+                                <div class="trend-summary-label">최고</div>
+                                <div class="trend-summary-value" style="color:var(--accent-red);">₩@highest.TotalKRW.ToString("N0")</div>
+                                <div class="trend-summary-date">@highest.Label</div>
                             </div>
                             @if (lowest != null)
                             {
-                                <div>
-                                    <div style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;">최저</div>
-                                    <div style="font-size:0.88rem;font-weight:700;color:var(--accent-green);">₩@lowest.TotalKRW.ToString("N0")</div>
-                                    <div style="font-size:0.72rem;color:var(--text-secondary);">@lowest.Label</div>
+                                <div class="trend-summary-item">
+                                    <div class="trend-summary-label">최저</div>
+                                    <div class="trend-summary-value" style="color:var(--accent-green);">₩@lowest.TotalKRW.ToString("N0")</div>
+                                    <div class="trend-summary-date">@lowest.Label</div>
                                 </div>
                             }
-                            <div>
-                                <div style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;">평균</div>
-                                <div style="font-size:0.88rem;font-weight:700;color:var(--gold-400);">₩@((visibleTrends.Average(t => (double)t.TotalKRW)).ToString("N0"))</div>
-                                <div style="font-size:0.72rem;color:var(--text-secondary);">@(_selectedMonths)개월</div>
+                            <div class="trend-summary-item">
+                                <div class="trend-summary-label">평균</div>
+                                <div class="trend-summary-value" style="color:var(--gold-400);">₩@((visibleTrends.Average(t => (double)t.TotalKRW)).ToString("N0"))</div>
+                                <div class="trend-summary-date">@(_selectedMonths)개월</div>
                             </div>
                         </div>
                     }
@@ -227,7 +271,6 @@
 
             @{
                 var catTotal = _data.CategoryBreakdown.Sum(c => c.MonthlyAmountKRW);
-                var catColors = new[] { "#6366f1","#4d9ef5","#2ed573","#ff4757","#a29bfe","#ffa502","#fd79a8","#00cec9","#55efc4","#e17055" };
             }
 
             <MudTable Items="@_data.CategoryBreakdown" Hover="true" Dense="false"
@@ -247,12 +290,10 @@
                     </MudTh>
                     <MudTh>연간 지출</MudTh>
                     <MudTh>비중</MudTh>
-                    <MudTh>비중 시각화</MudTh>
                 </HeaderContent>
                 <RowTemplate>
                     @{
-                        var rowIdx = _data.CategoryBreakdown.IndexOf(context);
-                        var rowColor = catColors[rowIdx % catColors.Length];
+                        var rowColor = CategoryService.GetColor(context.Category);
                         var rowPct = catTotal > 0 ? (double)(context.MonthlyAmountKRW / catTotal * 100) : 0;
                     }
                     <MudTd>
@@ -279,15 +320,13 @@
                         </span>
                     </MudTd>
                     <MudTd>
-                        <span style="font-weight:600;color:@rowColor;">
-                            @rowPct.ToString("F1")%
-                        </span>
-                    </MudTd>
-                    <MudTd>
-                        <div style="width:140px;">
-                            <div style="background:rgba(255,255,255,0.06);border-radius:10px;height:6px;overflow:hidden;">
-                                <div style="width:@rowPct%;height:100%;border-radius:10px;
-                                            background:@rowColor;transition:width 0.6s ease;"></div>
+                        <div class="category-table-share">
+                            <span class="category-table-share-value" style="color:@rowColor;">
+                                @rowPct.ToString("F1")%
+                            </span>
+                            <div class="category-table-share-track">
+                                <div class="category-table-share-fill"
+                                     style="width:@rowPct%;background:@rowColor;"></div>
                             </div>
                         </div>
                     </MudTd>
@@ -298,14 +337,414 @@
 </div>
 
 <style>
-    .donut-seg:hover { stroke-width: 42px !important; }
-    .period-btn:hover { background: rgba(255,255,255,0.06) !important; }
+    .spending-page-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .spending-page-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .period-control {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        padding: 3px;
+        background: var(--surface-elevated);
+        border: 1px solid var(--border-subtle);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .period-option {
+        min-height: 32px;
+        padding: 0 12px;
+        border: 0;
+        border-radius: 9px;
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 0.78rem;
+        font-weight: 700;
+        line-height: 1;
+        transition: background-color 0.18s ease, color 0.18s ease;
+    }
+
+    .period-option:hover {
+        background: rgba(99,102,241,0.08);
+        color: var(--text-primary);
+    }
+
+    .period-option.active {
+        background: rgba(99,102,241,0.16);
+        color: var(--gold-400);
+    }
+
+    .custom-period-entry {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        min-height: 32px;
+        margin-left: 2px;
+        padding: 0 10px 0 8px;
+        border-left: 1px solid var(--border-subtle);
+        border-radius: 8px;
+        color: var(--text-secondary);
+        font-size: 0.78rem;
+        font-weight: 700;
+    }
+
+    .custom-period-entry.active {
+        background: rgba(99,102,241,0.16);
+        color: var(--gold-400);
+    }
+
+    .custom-period-label {
+        color: inherit;
+        opacity: 0.86;
+    }
+
+    .custom-period-input {
+        width: 42px;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: inherit;
+        font-size: 0.78rem;
+        font-weight: 800;
+        text-align: right;
+    }
+
+    .custom-period-input::-webkit-outer-spin-button,
+    .custom-period-input::-webkit-inner-spin-button {
+        margin: 0;
+    }
+
+    .spending-chart-card {
+        min-height: 0;
+    }
+
+    .category-chart-card {
+        height: 100%;
+        min-height: 520px;
+    }
+
+    .trend-chart-card {
+        height: auto;
+    }
+
+    .analysis-card-header {
+        gap: 8px;
+        min-height: 34px;
+    }
+
+    .analysis-card-title {
+        color: var(--text-primary) !important;
+        font-size: 1.08rem !important;
+        font-weight: 700 !important;
+        line-height: 1.3 !important;
+    }
+
+    .donut-chart-wrap {
+        position: relative;
+        display: flex;
+        justify-content: center;
+        margin: 10px 0 22px;
+    }
+
+    .donut-chart {
+        width: min(230px, 70vw);
+        height: auto;
+        filter: drop-shadow(0 4px 24px rgba(0,0,0,0.5));
+    }
+
+    .donut-hover-card {
+        position: absolute;
+        top: 2px;
+        left: 50%;
+        z-index: 2;
+        min-width: 156px;
+        max-width: min(230px, calc(100vw - 64px));
+        padding: 9px 11px;
+        border: 1px solid;
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--surface-overlay) 94%, transparent);
+        box-shadow: 0 12px 30px rgba(0,0,0,0.28);
+        pointer-events: none;
+        transform: translateX(-50%);
+    }
+
+    .donut-hover-title {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        color: var(--text-primary);
+        font-size: 0.82rem;
+        font-weight: 800;
+        line-height: 1.25;
+        min-width: 0;
+    }
+
+    .donut-hover-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 3px;
+        flex: 0 0 auto;
+    }
+
+    .donut-hover-meta {
+        margin-top: 4px;
+        color: var(--text-secondary);
+        font-size: 0.74rem;
+        font-weight: 700;
+        line-height: 1.25;
+        white-space: nowrap;
+    }
+
+    .donut-center-label,
+    .donut-center-value,
+    .donut-center-sub {
+        pointer-events: none;
+        font-family: Pretendard;
+    }
+
+    .donut-center-label {
+        fill: var(--text-secondary);
+        font-size: 10px;
+        font-weight: 700;
+    }
+
+    .donut-center-value {
+        font-size: 17px;
+        font-weight: 800;
+    }
+
+    .donut-center-sub {
+        fill: var(--text-secondary);
+        font-size: 9px;
+        font-weight: 600;
+    }
+
+    .category-breakdown-row {
+        display: grid;
+        grid-template-columns: 12px minmax(0, 1fr) 40px 94px 116px;
+        gap: 10px;
+        align-items: center;
+        min-height: 40px;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .category-breakdown-row:last-child {
+        border-bottom: 0;
+    }
+
+    .category-color-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 3px;
+    }
+
+    .category-name {
+        color: var(--text-secondary) !important;
+        font-size: 0.9rem !important;
+        line-height: 1.35 !important;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .category-count {
+        color: var(--text-secondary) !important;
+        font-size: 0.8rem !important;
+        line-height: 1.2 !important;
+        text-align: right;
+    }
+
+    .category-amount {
+        color: var(--text-primary) !important;
+        font-size: 0.92rem !important;
+        font-weight: 700 !important;
+        line-height: 1.2 !important;
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    .category-share {
+        display: grid;
+        grid-template-columns: minmax(46px, 1fr) 42px;
+        align-items: center;
+        gap: 8px;
+        width: 116px;
+        justify-self: end;
+    }
+
+    .category-share-track {
+        background: rgba(255,255,255,0.06);
+        border-radius: 10px;
+        height: 6px;
+        overflow: hidden;
+    }
+
+    .category-share-fill {
+        height: 100%;
+        border-radius: 10px;
+        opacity: 0.85;
+    }
+
+    .category-share-text {
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        line-height: 1.2;
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    .category-table-share {
+        display: grid;
+        grid-template-columns: 52px minmax(90px, 140px);
+        align-items: center;
+        gap: 12px;
+        max-width: 210px;
+    }
+
+    .category-table-share-value {
+        font-size: 0.9rem;
+        font-weight: 700;
+        line-height: 1.2;
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    .category-table-share-track {
+        background: rgba(255,255,255,0.06);
+        border-radius: 10px;
+        height: 6px;
+        overflow: hidden;
+    }
+
+    .category-table-share-fill {
+        height: 100%;
+        border-radius: 10px;
+        transition: width 0.6s ease;
+    }
+
+    .trend-chart-frame {
+        overflow: visible;
+        padding-top: 2px;
+    }
+
+    .trend-chart-svg {
+        display: block;
+        overflow: visible;
+    }
+
+    .trend-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 48px;
+        border-top: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .trend-summary-item {
+        min-width: 86px;
+    }
+
+    .trend-summary-label {
+        color: var(--text-secondary);
+        font-size: 0.78rem;
+        font-weight: 600;
+        line-height: 1.35;
+    }
+
+    .trend-summary-value {
+        font-size: 1.02rem;
+        font-weight: 800;
+        line-height: 1.35;
+        white-space: nowrap;
+    }
+
+    .trend-summary-date {
+        color: var(--text-secondary);
+        font-size: 0.78rem;
+        line-height: 1.35;
+    }
+
+    .donut-seg {
+        outline: none;
+        transition: stroke-width 0.16s ease, opacity 0.16s ease;
+    }
+
+    .donut-seg:hover,
+    .donut-seg:focus-visible {
+        opacity: 1 !important;
+        stroke-width: 42px !important;
+    }
+
+    @@media (max-width: 1200px) {
+        .category-breakdown-row {
+            grid-template-columns: 12px minmax(0, 1fr) 38px 92px;
+            row-gap: 6px;
+        }
+
+        .category-share {
+            grid-column: 2 / -1;
+            width: 100%;
+        }
+    }
+
+    @@media (max-width: 600px) {
+        .spending-chart-card {
+            min-height: auto;
+        }
+
+        .category-chart-card {
+            height: auto;
+        }
+
+        .analysis-card-header {
+            flex-wrap: wrap;
+        }
+
+        .spending-page-actions {
+            width: 100%;
+            justify-content: flex-start;
+        }
+
+        .period-control {
+            width: 100%;
+            flex-wrap: wrap;
+        }
+
+        .category-breakdown-row {
+            grid-template-columns: 12px minmax(0, 1fr) 38px 90px;
+            row-gap: 6px;
+        }
+
+        .trend-summary {
+            gap: 18px;
+        }
+    }
 </style>
 
 @code {
+    private static readonly int[] PresetMonths = new[] { 1, 3, 6, 12 };
+
     private SpendingTrendsDto? _data;
+    private DonutHoverInfo? _donutHover;
     private bool _loading = true;
     private int _selectedMonths = 12;
+    private int _customMonths = 12;
+
+    private bool IsCustomPeriod => !PresetMonths.Contains(_selectedMonths);
 
     protected override async Task OnInitializedAsync()
     {
@@ -315,9 +754,26 @@
 
     private async Task SetMonths(int months)
     {
-        _selectedMonths = months;
+        _selectedMonths = NormalizeMonths(months);
+        _customMonths = _selectedMonths;
         await LoadData();
     }
+
+    private async Task ApplyCustomMonths(ChangeEventArgs args)
+    {
+        if (!int.TryParse(args.Value?.ToString(), out var months))
+        {
+            _customMonths = _selectedMonths;
+            return;
+        }
+
+        await SetMonths(months);
+    }
+
+    private string GetPeriodButtonClass(int months) =>
+        _selectedMonths == months ? "active" : string.Empty;
+
+    private static int NormalizeMonths(int months) => Math.Clamp(months, 1, 24);
 
     private async Task LoadData()
     {
@@ -331,16 +787,35 @@
         {
             _data = GetMockData();
         }
+
+        await CategoryService.EnsureLoadedAsync(_data.CategoryBreakdown.Select(c => c.Category));
         _loading = false;
     }
 
     private string FormatCompact(decimal value)
     {
-        if (value >= 10000) return $"{value / 10000:F0}만";
+        if (value >= 10000)
+        {
+            var manWon = Math.Round(value / 10000m, 1);
+            return manWon % 1 == 0 ? $"{manWon:F0}만" : $"{manWon:F1}만";
+        }
+
         return value.ToString("N0");
     }
 
     private record DonutSegment(double Dash, double Gap, double Offset);
+    private record DonutHoverInfo(string Category, decimal AmountKRW, decimal Percent, int Count, string Color);
+
+    private void ShowDonutSegment(CategorySpend category, decimal total, string color)
+    {
+        var percent = total > 0 ? category.MonthlyAmountKRW / total * 100 : 0;
+        _donutHover = new DonutHoverInfo(category.Category, category.MonthlyAmountKRW, percent, category.Count, color);
+    }
+
+    private void ClearDonutSegment()
+    {
+        _donutHover = null;
+    }
 
     private List<DonutSegment> BuildDonutSegments(List<CategorySpend> categories, decimal total)
     {
@@ -364,16 +839,25 @@
 
         var maxVal = (double)trends.Max(t => t.TotalKRW);
         if (maxVal == 0) maxVal = 1;
-        var chartW = 560;
-        var chartH = 200;
+        var plotW = 560;
+        var plotH = 220;
+        var marginLeft = 42;
+        var marginRight = 14;
+        var marginTop = 22;
+        var marginBottom = months > 12 ? 64 : 38;
+        var svgW = marginLeft + plotW + marginRight;
+        var svgH = marginTop + plotH + marginBottom;
         var barCount = trends.Count;
-        var barGap = 8;
-        var barW = (chartW - barGap * (barCount + 1)) / barCount;
+        var barGap = months > 12 ? 6d : months == 12 ? 10d : 16d;
+        var barW = (plotW - barGap * (barCount + 1)) / barCount;
         var currentMonth = DateTime.Now.ToString("yyyy-MM");
-        var fontSize = months == 12 ? 7 : 8;
+        var xAxisFontSize = months > 12 ? 8 : months == 12 ? 9 : 10;
+        var yAxisFontSize = 10;
+        var valueFontSize = 9;
+        var rotateMonthLabels = months > 12;
 
         var sb = new System.Text.StringBuilder();
-        sb.Append($"<svg viewBox=\"0 -10 {chartW} {chartH + 60}\" width=\"100%\" style=\"overflow:visible;\">");
+        sb.Append($"<svg viewBox=\"0 0 {svgW} {svgH}\" width=\"100%\" class=\"trend-chart-svg\">");
 
         sb.Append("""
             <defs>
@@ -391,32 +875,41 @@
         for (int g = 0; g <= 4; g++)
         {
             var yVal = maxVal * g / 4;
-            var yPos = chartH - (chartH * g / 4);
-            sb.Append($"<line x1=\"0\" y1=\"{yPos}\" x2=\"{chartW}\" y2=\"{yPos}\" stroke=\"rgba(255,255,255,0.05)\" stroke-width=\"1\"/>");
-            sb.Append($"<text x=\"-6\" y=\"{yPos + 4}\" text-anchor=\"end\" style=\"fill:var(--text-secondary);font-size:8px;font-family:Pretendard;\">{FormatCompact((decimal)yVal)}</text>");
+            var yPos = marginTop + plotH - (plotH * g / 4);
+            sb.Append($"<line x1=\"{marginLeft}\" y1=\"{yPos}\" x2=\"{marginLeft + plotW}\" y2=\"{yPos}\" stroke=\"rgba(255,255,255,0.06)\" stroke-width=\"1\"/>");
+            sb.Append($"<text x=\"{marginLeft - 10}\" y=\"{yPos + 4}\" text-anchor=\"end\" style=\"fill:var(--text-secondary);font-size:{yAxisFontSize}px;font-family:Pretendard;font-weight:500;\">{FormatCompact((decimal)yVal)}</text>");
         }
 
         for (int i = 0; i < trends.Count; i++)
         {
             var trend = trends[i];
-            var barH = (double)trend.TotalKRW / maxVal * chartH;
-            var x = barGap + i * (barW + barGap);
-            var y = chartH - barH;
+            var barH = (double)trend.TotalKRW / maxVal * plotH;
+            var x = marginLeft + barGap + i * (barW + barGap);
+            var y = marginTop + plotH - barH;
             var isCurrent = trend.Month == currentMonth;
             var fill = isCurrent ? "url(#barGradCurrent)" : "url(#barGrad)";
             var labelColor = isCurrent ? "var(--gold-400)" : "var(--text-secondary)";
             var labelWeight = isCurrent ? "700" : "400";
             var valColor = isCurrent ? "var(--gold-300)" : "var(--text-secondary)";
+            var labelX = x + barW / 2;
+            var labelY = marginTop + plotH + 24;
 
             sb.Append($"<rect x=\"{x}\" y=\"{y:F1}\" width=\"{barW}\" height=\"{(barH > 0 ? barH : 0):F1}\" fill=\"{fill}\" rx=\"4\" style=\"transition:opacity 0.2s;\"/>");
 
-            if (barH > 20)
-                sb.Append($"<text x=\"{x + barW / 2}\" y=\"{y - 5:F1}\" text-anchor=\"middle\" style=\"fill:{valColor};font-size:7px;font-family:Pretendard;font-weight:{labelWeight};\">₩{FormatCompact(trend.TotalKRW)}</text>");
+            if (trend.TotalKRW > 0 && (months <= 12 || isCurrent))
+                sb.Append($"<text x=\"{x + barW / 2}\" y=\"{Math.Max(12, y - 7):F1}\" text-anchor=\"middle\" style=\"fill:{valColor};font-size:{valueFontSize}px;font-family:Pretendard;font-weight:{labelWeight};\">₩{FormatCompact(trend.TotalKRW)}</text>");
 
-            sb.Append($"<text x=\"{x + barW / 2}\" y=\"{chartH + 16}\" text-anchor=\"middle\" style=\"fill:{labelColor};font-size:{fontSize}px;font-family:Pretendard;font-weight:{labelWeight};\">{trend.Label}</text>");
+            if (rotateMonthLabels)
+            {
+                sb.Append($"<text x=\"{labelX}\" y=\"{labelY}\" text-anchor=\"end\" transform=\"rotate(-45 {labelX} {labelY})\" style=\"fill:{labelColor};font-size:{xAxisFontSize}px;font-family:Pretendard;font-weight:{labelWeight};\">{trend.Label}</text>");
+            }
+            else
+            {
+                sb.Append($"<text x=\"{labelX}\" y=\"{labelY}\" text-anchor=\"middle\" style=\"fill:{labelColor};font-size:{xAxisFontSize}px;font-family:Pretendard;font-weight:{labelWeight};\">{trend.Label}</text>");
+            }
         }
 
-        sb.Append($"<line x1=\"0\" y1=\"{chartH}\" x2=\"{chartW}\" y2=\"{chartH}\" stroke=\"rgba(255,255,255,0.1)\" stroke-width=\"1\"/>");
+        sb.Append($"<line x1=\"{marginLeft}\" y1=\"{marginTop + plotH}\" x2=\"{marginLeft + plotW}\" y2=\"{marginTop + plotH}\" stroke=\"rgba(255,255,255,0.1)\" stroke-width=\"1\"/>");
         sb.Append("</svg>");
         return sb.ToString();
     }

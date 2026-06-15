@@ -86,6 +86,59 @@ public class AuthService
         };
     }
 
+    public async Task<(UserProfileResponse? profile, string? error)> UpdateProfileAsync(
+        string userId,
+        UpdateProfileRequest req)
+    {
+        var displayName = req.DisplayName?.Trim();
+        if (string.IsNullOrWhiteSpace(displayName))
+            return (null, "표시 이름을 입력해주세요.");
+
+        if (displayName.Length > 100)
+            return (null, "표시 이름은 100자 이하여야 합니다.");
+
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+            return (null, "유저를 찾을 수 없습니다.");
+
+        user.DisplayName = displayName;
+
+        var result = await _userManager.UpdateAsync(user);
+        if (!result.Succeeded)
+            return (null, string.Join(" ", result.Errors.Select(e => e.Description)));
+
+        return (new UserProfileResponse
+        {
+            DisplayName = user.DisplayName,
+            Email = user.Email!,
+        }, null);
+    }
+
+    public async Task<(AuthResponse? auth, string? error)> ChangePasswordAsync(
+        string userId,
+        ChangePasswordRequest req)
+    {
+        if (string.IsNullOrWhiteSpace(req.CurrentPassword) ||
+            string.IsNullOrWhiteSpace(req.NewPassword))
+            return (null, "현재 비밀번호와 새 비밀번호를 입력해주세요.");
+
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+            return (null, "유저를 찾을 수 없습니다.");
+
+        var result = await _userManager.ChangePasswordAsync(
+            user,
+            req.CurrentPassword,
+            req.NewPassword);
+
+        if (!result.Succeeded)
+            return (null, string.Join(" ", result.Errors.Select(e => e.Description)));
+
+        await RevokeUserRefreshTokensAsync(userId);
+
+        return (await IssueTokenPairAsync(user), null);
+    }
+
     public async Task RevokeRefreshTokenAsync(string refreshToken)
     {
         var stored = await _db.RefreshTokens
@@ -96,6 +149,21 @@ public class AuthService
             stored.IsRevoked = true;
             await _db.SaveChangesAsync();
         }
+    }
+
+    private async Task RevokeUserRefreshTokensAsync(string userId)
+    {
+        var tokens = await _db.RefreshTokens
+            .Where(t => t.UserId == userId && !t.IsRevoked)
+            .ToListAsync();
+
+        foreach (var token in tokens)
+        {
+            token.IsRevoked = true;
+        }
+
+        if (tokens.Count > 0)
+            await _db.SaveChangesAsync();
     }
 
     private async Task<AuthResponse> IssueTokenPairAsync(ApplicationUser user)

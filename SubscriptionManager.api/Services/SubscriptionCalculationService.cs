@@ -69,6 +69,7 @@ public class SubscriptionCalculationService : ISubscriptionCalculationService
             Amount = subscription.Amount,
             Currency = subscription.Currency,
             BillingCycle = subscription.BillingCycle,
+            StartDate = subscription.StartDate.Date,
             NextBillingDate = nextBillingDate,
             IconEmoji = subscription.IconEmoji,
             Notes = subscription.Notes,

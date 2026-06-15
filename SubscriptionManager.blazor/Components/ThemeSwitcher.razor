@@ -94,7 +94,7 @@
                 _selfRef = DotNetObjectReference.Create(this);
                 await JS.InvokeVoidAsync("subTrackThemeSwitcher.attach", _root, _selfRef);
             }
-            catch { /* JS 미준비 — 드래그 없이 클릭만 동작 */ }
+            catch { /* JS 로드 안 됨 — 드래그 없이 클릭만 동작 */ }
         }
     }
 

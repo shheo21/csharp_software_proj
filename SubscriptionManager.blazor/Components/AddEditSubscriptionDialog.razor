@@ -120,8 +120,18 @@
                     </div>
                 </MudItem>
 
-                <!-- Next Billing Date -->
-                <MudItem xs="12">
+                <!-- Billing Dates -->
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker @bind-Date="_startDate"
+                                   Label="구독 시작일"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense"
+                                   DateFormat="yyyy.MM.dd"
+                                   MaxDate="_nextBillingDate"
+                                   PickerVariant="PickerVariant.Dialog"
+                                   AutoClose="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
                     <MudDatePicker @bind-Date="_nextBillingDate"
                                    Label="다음 결제일"
                                    Variant="Variant.Outlined"
@@ -183,6 +193,7 @@
 
     private MudForm? _mudForm;
     private CreateSubscriptionRequest _form = new();
+    private DateTime? _startDate = DateTime.Today;
     private DateTime? _nextBillingDate = DateTime.Now.AddMonths(1);
     private decimal _currentRate = 0;
 
@@ -212,10 +223,12 @@
                 Amount = Subscription.Amount,
                 Currency = Subscription.Currency,
                 BillingCycle = Subscription.BillingCycle,
+                StartDate = Subscription.StartDate,
                 NextBillingDate = Subscription.NextBillingDate,
                 IconEmoji = Subscription.IconEmoji,
                 Notes = Subscription.Notes
             };
+            _startDate = Subscription.StartDate == default ? DateTime.Today : Subscription.StartDate;
             _nextBillingDate = Subscription.NextBillingDate;
             _isActive = Subscription.IsActive;
         }
@@ -223,7 +236,8 @@
         {
             _isEdit = false;
             _editId = 0;
-            _form = new CreateSubscriptionRequest { BillingCycle = "MONTHLY", Currency = "KRW" };
+            _form = new CreateSubscriptionRequest { BillingCycle = "MONTHLY", Currency = "KRW", StartDate = DateTime.Today };
+            _startDate = DateTime.Today;
             _nextBillingDate = DateTime.Now.AddMonths(1);
             _isActive = true;
         }
@@ -266,7 +280,16 @@
         if (_mudForm != null) await _mudForm.ValidateAsync();
         if (string.IsNullOrWhiteSpace(_form.Name)) return;
 
-        _form.NextBillingDate = _nextBillingDate ?? DateTime.Now.AddMonths(1);
+        var startDate = _startDate ?? DateTime.Today;
+        var nextBillingDate = _nextBillingDate ?? DateTime.Now.AddMonths(1);
+        if (startDate.Date > nextBillingDate.Date)
+        {
+            Snackbar.Add("구독 시작일은 다음 결제일보다 늦을 수 없습니다.", Severity.Warning);
+            return;
+        }
+
+        _form.StartDate = startDate;
+        _form.NextBillingDate = nextBillingDate;
         _saving = true;
 
         try
@@ -277,6 +300,7 @@
                 {
                     Name = _form.Name, Category = _form.Category, Amount = _form.Amount,
                     Currency = _form.Currency, BillingCycle = _form.BillingCycle,
+                    StartDate = _form.StartDate,
                     NextBillingDate = _form.NextBillingDate, IconEmoji = _form.IconEmoji,
                     Notes = _form.Notes, IsActive = _isActive
                 };

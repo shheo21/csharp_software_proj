@@ -1,5 +1,5 @@
 @page "/subscriptions"
-@*attribute [Authorize]*@
+@attribute [Authorize]
 @inject ISubscriptionApiService ApiService
 @inject ICategoryService CategoryService
 @inject IDialogService DialogService
@@ -58,10 +58,10 @@
                            Variant="Variant.Outlined" Margin="Margin.Dense"
                            SelectedValuesChanged="FilterChanged">
                     <MudSelectItem Value="@("전체")">전체</MudSelectItem>
-                    <MudSelectItem Value="@("엔터테인먼트")">엔터테인먼트</MudSelectItem>
-                    <MudSelectItem Value="@("음악")">음악</MudSelectItem>
-                    <MudSelectItem Value="@("창작 도구")">창작 도구</MudSelectItem>
-                    <MudSelectItem Value="@("개발 도구")">개발 도구</MudSelectItem>
+                    @foreach (var category in CategoryService.Categories)
+                    {
+                        <MudSelectItem Value="@category">@category</MudSelectItem>
+                    }
                 </MudSelect>
             </MudItem>
             <MudItem xs="6" sm="2">
@@ -85,15 +85,33 @@
         </MudGrid>
     </div>
 
-    <div class="d-flex gap-3 mb-4 fade-in-up fade-in-up-2">
-        <MudChip T="string" Icon="@Icons.Material.Filled.FilterList" 
-                 Style="background: rgba(99,102,241,0.1); color: var(--accent-blue); font-weight: 700; font-size: 0.8rem; border-radius: 8px;">
-            @FilteredSubscriptions.Count()개 서비스
-        </MudChip>
-        <MudChip T="string" Icon="@Icons.Material.Filled.Payments" 
-                 Style="background: rgba(99,102,241,0.1); color: var(--accent-blue); font-weight: 700; font-size: 0.8rem; border-radius: 8px;">
-            월 ₩@FilteredSubscriptions.Sum(s => s.MonthlyAmountInKRW).ToString("N0")
-        </MudChip>
+    <div class="subscription-summary-bar d-flex align-center justify-space-between mb-4 fade-in-up fade-in-up-2">
+        <div class="subscription-summary-metrics d-flex align-center">
+            <MudChip T="string" Icon="@Icons.Material.Filled.FilterList" 
+                     Style="background: rgba(99,102,241,0.1); color: var(--accent-blue); font-weight: 700; font-size: 0.8rem; border-radius: 8px;">
+                @FilteredSubscriptions.Count()개 서비스
+            </MudChip>
+            <MudChip T="string" Icon="@Icons.Material.Filled.Payments" 
+                     Style="background: rgba(99,102,241,0.1); color: var(--accent-blue); font-weight: 700; font-size: 0.8rem; border-radius: 8px;">
+                월 ₩@FilteredSubscriptions.Sum(s => s.MonthlyAmountInKRW).ToString("N0")
+            </MudChip>
+        </div>
+        <div class="view-mode-toggle" role="group" aria-label="구독 보기 방식">
+            <MudTooltip Text="리스트형 보기">
+                <MudIconButton Icon="@Icons.Material.Filled.ViewList"
+                               Size="Size.Small"
+                               Class='@GetViewModeButtonClass(ListViewMode)'
+                               aria-label="리스트형 보기"
+                               OnClick='@(() => SetViewModeAsync(ListViewMode))' />
+            </MudTooltip>
+            <MudTooltip Text="카드형 보기">
+                <MudIconButton Icon="@Icons.Material.Filled.GridView"
+                               Size="Size.Small"
+                               Class='@GetViewModeButtonClass(CardViewMode)'
+                               aria-label="카드형 보기"
+                               OnClick='@(() => SetViewModeAsync(CardViewMode))' />
+            </MudTooltip>
+        </div>
     </div>
 
     @if (_loading)
@@ -115,7 +133,7 @@
         @if (_viewMode == "list")
         {
             <div class="glass-card fade-in-up fade-in-up-3" style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse; min-width: 950px;">
+                <table style="width: 100%; border-collapse: collapse; min-width: 1040px;">
                     <thead>
                         <tr style="border-bottom: 1px solid rgba(255,255,255,0.08); color: var(--text-secondary); font-size: 0.85rem;">
                             <th style="padding: 16px 24px; text-align: left; font-weight: 500;">서비스</th>
@@ -123,6 +141,7 @@
                             <th style="padding: 16px 8px; text-align: left; font-weight: 500;">결제 금액</th>
                             <th style="padding: 16px 8px; text-align: left; font-weight: 500;">원화 환산</th>
                             <th style="padding: 16px 8px; text-align: center; font-weight: 500;">주기</th>
+                            <th style="padding: 16px 8px; text-align: center; font-weight: 500;">시작일</th>
                             <th style="padding: 16px 8px; text-align: center; font-weight: 500;">다음 결제일</th>
                             <th style="padding: 16px 8px; text-align: center; font-weight: 500;">D-DAY</th>
                             <th style="padding: 16px 8px; text-align: center; font-weight: 500;">상태</th>
@@ -154,12 +173,13 @@
                                 <td style="padding: 16px 8px; text-align: center;">
                                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Style="color: #52c41a; border-color: rgba(82,196,26,0.5); background: rgba(82,196,26,0.05);">@(sub.BillingCycle == "MONTHLY" ? "월간" : "연간")</MudChip>
                                 </td>
+                                <td style="padding: 16px 8px; text-align: center; color: var(--text-secondary); font-weight: 500; font-size: 0.86rem;">@sub.StartDate.ToString("yyyy.MM.dd")</td>
                                 <td style="padding: 16px 8px; text-align: center; color: var(--text-primary); font-weight: 500; font-size: 0.9rem;">@sub.NextBillingDate.ToString("yyyy.MM.dd")</td>
                                 <td style="padding: 16px 8px; text-align: center;">
-                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Style="@GetDDayChipStyle(sub.DaysUntilBilling)">D-@sub.DaysUntilBilling</MudChip>
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Style="@GetDDayChipStyle(sub.DaysUntilBilling)">@sub.DaysLabel</MudChip>
                                 </td>
                                 <td style="padding: 16px 8px; text-align: center;">
-                                    <MudSwitch @bind-Value="sub.IsActive" Color="Color.Primary" Class="custom-purple-toggle mx-auto" Style="margin-left: 12px;" />
+                                    <MudSwitch T="bool" Value="@sub.IsActive" ValueChanged="@((value) => ToggleStatus(sub, value))" Color="Color.Primary" Class="custom-purple-toggle mx-auto" Style="margin-left: 12px;" />
                                 </td>
                                 <td style="padding: 16px 24px; text-align: right;">
                                     <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" OnClick="@(() => OpenEditDialog(sub))" />
@@ -195,7 +215,7 @@
                                 </div>
                             </div>
                             
-                            <MudDivider Style="background-color: rgba(255,255,255,0.08); margin: 8px 0 16px 0;" />
+                            <div class="subscription-card-divider"></div>
 
                             <div class="mb-4">
                                 <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">결제 금액 (@(sub.BillingCycle == "MONTHLY" ? "월간" : "연간"))</div>
@@ -209,10 +229,10 @@
 
                             <div class="mt-auto d-flex align-center justify-space-between" style="background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 10px;">
                                 <div class="d-flex align-center">
-                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Style="@GetDDayChipStyle(sub.DaysUntilBilling)">D-@sub.DaysUntilBilling</MudChip>
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Style="@GetDDayChipStyle(sub.DaysUntilBilling)">@sub.DaysLabel</MudChip>
                                     <span style="font-size: 0.8rem; font-weight: 500; color: var(--text-secondary); margin-left: 8px;">@sub.NextBillingDate.ToString("MM.dd")</span>
                                 </div>
-                                <MudSwitch @bind-Value="sub.IsActive" Color="Color.Primary" Class="custom-purple-toggle" Style="margin: 0;" />
+                                <MudSwitch T="bool" Value="@sub.IsActive" ValueChanged="@((value) => ToggleStatus(sub, value))" Color="Color.Primary" Class="custom-purple-toggle" Style="margin: 0;" />
                             </div>
                             
                         </div>
@@ -224,9 +244,14 @@
 </div>
 
 <style>
-    .custom-purple-toggle .mud-switch-track { background-color: #4f46e5; opacity: 0.4 !important; height: 18px; border-radius: 10px; }
-    .custom-purple-toggle.mud-checked .mud-switch-thumb { background-color: #6366f1 !important; }
-    .custom-purple-toggle.mud-checked .mud-switch-track { background-color: #6366f1 !important; opacity: 0.5 !important; }
+    .subscription-summary-bar { gap: 12px; flex-wrap: wrap; }
+    .subscription-summary-metrics { gap: 12px; flex-wrap: wrap; }
+    .view-mode-toggle { display: flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; background: rgba(255,255,255,0.03); }
+    .view-mode-button { width: 36px; height: 36px; border-radius: 8px !important; color: var(--text-secondary) !important; }
+    .view-mode-button.view-mode-button-active { color: var(--accent-blue) !important; background: rgba(99,102,241,0.14) !important; }
+    .subscription-card-divider { flex: 0 0 1px; height: 1px; background-color: rgba(255,255,255,0.08); margin: 8px 0 16px; }
+    .custom-purple-toggle .mud-switch-track { background-color: rgba(107,114,128,0.55) !important; }
+    .custom-purple-toggle.mud-checked .mud-switch-track { background-color: var(--gold-500) !important; }
     .table-row-hover:hover { background-color: rgba(255,255,255,0.03); }
     .glass-popover-menu { background: rgba(15, 23, 42, 0.95) !important; backdrop-filter: blur(20px) !important; border-radius: 12px !important; border: 1px solid rgba(255,255,255,0.1) !important; box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important; }
 </style>
@@ -241,8 +266,12 @@
     private string _filterCurrency = "전체";
     private string _filterCycle = "전체";
     
+    private const string KeyViewMode = "subtrack_view_mode";
+    private const string ListViewMode = "list";
+    private const string CardViewMode = "card";
+
     // 화면 표시 방식 저장 변수
-    private string _viewMode = "list"; 
+    private string _viewMode = ListViewMode; 
 
     private IEnumerable<SubscriptionDto> FilteredSubscriptions => _subscriptions.Where(s =>
         (string.IsNullOrWhiteSpace(_searchQuery) || 
@@ -266,11 +295,11 @@
         var fileName = _exportFileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase) ? _exportFileName : $"{_exportFileName}.csv";
         var sb = new System.Text.StringBuilder();
         sb.Append('\uFEFF');
-        sb.AppendLine("서비스 이름,카테고리,원화 환산 금액,결제 주기");
+        sb.AppendLine("서비스 이름,카테고리,원화 환산 금액,결제 주기,구독 시작일,다음 결제일");
 
         foreach (var sub in FilteredSubscriptions)
         {
-            sb.AppendLine($"\"{sub.Name}\",\"{sub.Category}\",{sub.AmountInKRW},{(sub.BillingCycle == "MONTHLY" ? "월간" : "연간")}");
+            sb.AppendLine($"\"{sub.Name}\",\"{sub.Category}\",{sub.AmountInKRW},{(sub.BillingCycle == "MONTHLY" ? "월간" : "연간")},{sub.StartDate:yyyy.MM.dd},{sub.NextBillingDate:yyyy.MM.dd}");
         }
 
         var base64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(sb.ToString()));
@@ -282,15 +311,50 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _viewMode = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "subtrack_view_mode") ?? "list";
+        var storedViewMode = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", KeyViewMode);
+        _viewMode = IsValidViewMode(storedViewMode) ? storedViewMode! : ListViewMode;
         await LoadData();
     }
+
+    private async Task SetViewModeAsync(string viewMode)
+    {
+        if (!IsValidViewMode(viewMode) || _viewMode == viewMode)
+        {
+            return;
+        }
+
+        var previousViewMode = _viewMode;
+        _viewMode = viewMode;
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", KeyViewMode, viewMode);
+        }
+        catch (Exception ex)
+        {
+            _viewMode = previousViewMode;
+            Snackbar.Add($"보기 방식 저장 실패: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private string GetViewModeButtonClass(string viewMode) =>
+        _viewMode == viewMode ? "view-mode-button view-mode-button-active" : "view-mode-button";
+
+    private static bool IsValidViewMode(string? viewMode) => viewMode is ListViewMode or CardViewMode;
 
     private async Task LoadData()
     {
         _loading = true;
-        try { _subscriptions = await ApiService.GetSubscriptionsAsync(); }
-        catch { _subscriptions = GetMockSubscriptions(); }
+        try
+        {
+            _subscriptions = await ApiService.GetSubscriptionsAsync();
+            await CategoryService.EnsureLoadedAsync(_subscriptions.Select(s => s.Category));
+        }
+        catch
+        {
+            _subscriptions = GetMockSubscriptions();
+            await CategoryService.EnsureLoadedAsync();
+        }
         finally { _loading = false; }
     }
 
@@ -302,21 +366,78 @@
     private async Task OpenAddDialog()
     {
         var options = new DialogOptions { CloseOnEscapeKey = true, BackdropClick = false };
-        var dialog = await DialogService.ShowAsync<AddSubDialog>("새 구독 추가", options);
+        var dialog = await DialogService.ShowAsync<AddEditSubscriptionDialog>("새 구독 추가", options);
         var result = await dialog.Result;
         
-        if (result != null && !result.Canceled) { Snackbar.Add("새 구독이 추가되었습니다.", Severity.Success); await LoadData(); }
+        if (result != null && !result.Canceled) await LoadData();
     }
 
-    private async Task OpenEditDialog(SubscriptionDto sub) => Snackbar.Add($"{sub.Name} 수정 창 열림 (구현 예정)", Severity.Info);
+    private async Task OpenEditDialog(SubscriptionDto sub)
+    {
+        var parameters = new DialogParameters { ["Subscription"] = sub };
+        var options = new DialogOptions { CloseOnEscapeKey = true, BackdropClick = false };
+        var dialog = await DialogService.ShowAsync<AddEditSubscriptionDialog>("구독 수정", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled) await LoadData();
+    }
     
-    private void ToggleStatus(SubscriptionDto sub) { sub.IsActive = !sub.IsActive; Snackbar.Add(sub.IsActive ? $"{sub.Name} 활성화 됨" : $"{sub.Name} 해지 처리됨", sub.IsActive ? Severity.Success : Severity.Warning); }
+    private async Task ToggleStatus(SubscriptionDto sub, bool isActive)
+    {
+        var original = sub.IsActive;
+        sub.IsActive = isActive;
+
+        try
+        {
+            var result = await ApiService.UpdateAsync(sub.Id, ToUpdateRequest(sub));
+            if (result == null)
+            {
+                sub.IsActive = original;
+                Snackbar.Add("구독을 찾을 수 없습니다.", Severity.Error);
+                return;
+            }
+
+            Snackbar.Add(isActive ? $"{sub.Name} 활성화 됨" : $"{sub.Name} 해지 처리됨", isActive ? Severity.Success : Severity.Warning);
+            await LoadData();
+        }
+        catch
+        {
+            sub.IsActive = original;
+            Snackbar.Add("상태 변경에 실패했습니다. 다시 시도해주세요.", Severity.Error);
+        }
+    }
     
-    private void DeleteSubscription(SubscriptionDto sub) { _subscriptions.Remove(sub); Snackbar.Add($"{sub.Name} 삭제됨", Severity.Error); }
+    private async Task DeleteSubscription(SubscriptionDto sub)
+    {
+        try
+        {
+            await ApiService.DeleteAsync(sub.Id);
+            Snackbar.Add($"{sub.Name} 삭제됨", Severity.Success);
+            await LoadData();
+        }
+        catch
+        {
+            Snackbar.Add("삭제에 실패했습니다. 다시 시도해주세요.", Severity.Error);
+        }
+    }
+
+    private static UpdateSubscriptionRequest ToUpdateRequest(SubscriptionDto sub) => new()
+    {
+        Name = sub.Name,
+        Category = sub.Category,
+        Amount = sub.Amount,
+        Currency = sub.Currency,
+        BillingCycle = sub.BillingCycle,
+        StartDate = sub.StartDate,
+        NextBillingDate = sub.NextBillingDate,
+        IconEmoji = sub.IconEmoji,
+        Notes = sub.Notes,
+        IsActive = sub.IsActive
+    };
     
     private string GetCategoryChipStyle(string category) => category switch { "엔터테인먼트" => "color: #ff4d4f; border-color: rgba(255,77,79,0.5); background: rgba(255,77,79,0.05);", "창작 도구" => "color: #ff75c3; border-color: rgba(255,117,195,0.5); background: rgba(255,117,195,0.05);", "음악" => "color: #b37feb; border-color: rgba(179,127,235,0.5); background: rgba(179,127,235,0.05);", "개발 도구" => "color: #69c0ff; border-color: rgba(105,192,255,0.5); background: rgba(105,192,255,0.05);", _ => "color: var(--text-secondary); border-color: rgba(255,255,255,0.2);" };
     
     private string GetDDayChipStyle(int days) => days <= 3 ? "color: #ff4d4f; border-color: rgba(255,77,79,0.5); background: rgba(255,77,79,0.05);" : days <= 7 ? "color: #faad14; border-color: rgba(250,173,20,0.5); background: rgba(250,173,20,0.05);" : "color: #52c41a; border-color: rgba(82,196,26,0.5); background: rgba(82,196,26,0.05);";
     
-    private List<SubscriptionDto> GetMockSubscriptions() => new() { new() { Id=1, Name="Netflix", Category="엔터테인먼트", Currency="KRW", Amount=17000, AmountInKRW=17000, MonthlyAmountInKRW=17000, BillingCycle="MONTHLY", NextBillingDate=DateTime.Now.AddDays(5), DaysUntilBilling=5, IconEmoji="🎬", IsActive=true }, new() { Id=2, Name="Adobe Creative Cloud", Category="창작 도구", Currency="USD", Amount=54.99m, AmountInKRW=75886, MonthlyAmountInKRW=75886, BillingCycle="MONTHLY", NextBillingDate=DateTime.Now.AddDays(12), DaysUntilBilling=12, IconEmoji="🎨", IsActive=true }, new() { Id=3, Name="CLIP STUDIO PAINT", Category="창작 도구", Currency="KRW", Amount=4800, AmountInKRW=4800, MonthlyAmountInKRW=400, BillingCycle="YEARLY", NextBillingDate=DateTime.Now.AddDays(45), DaysUntilBilling=45, IconEmoji="✏️", IsActive=true }, new() { Id=4, Name="Spotify", Category="음악", Currency="USD", Amount=10.99m, AmountInKRW=15166, MonthlyAmountInKRW=15166, BillingCycle="MONTHLY", NextBillingDate=DateTime.Now.AddDays(3), DaysUntilBilling=3, IconEmoji="🎵", IsActive=true }, new() { Id=5, Name="GitHub Copilot", Category="개발 도구", Currency="USD", Amount=10m, AmountInKRW=13800, MonthlyAmountInKRW=13800, BillingCycle="MONTHLY", NextBillingDate=DateTime.Now.AddDays(20), DaysUntilBilling=20, IconEmoji="💻", IsActive=true } };
+    private List<SubscriptionDto> GetMockSubscriptions() => new() { new() { Id=1, Name="Netflix", Category="엔터테인먼트", Currency="KRW", Amount=17000, AmountInKRW=17000, MonthlyAmountInKRW=17000, BillingCycle="MONTHLY", StartDate=DateTime.Today.AddMonths(-6), NextBillingDate=DateTime.Now.AddDays(5), DaysUntilBilling=5, IconEmoji="🎬", IsActive=true }, new() { Id=2, Name="Adobe Creative Cloud", Category="창작 도구", Currency="USD", Amount=54.99m, AmountInKRW=75886, MonthlyAmountInKRW=75886, BillingCycle="MONTHLY", StartDate=DateTime.Today.AddMonths(-4), NextBillingDate=DateTime.Now.AddDays(12), DaysUntilBilling=12, IconEmoji="🎨", IsActive=true }, new() { Id=3, Name="CLIP STUDIO PAINT", Category="창작 도구", Currency="KRW", Amount=4800, AmountInKRW=4800, MonthlyAmountInKRW=400, BillingCycle="YEARLY", StartDate=DateTime.Today.AddYears(-1), NextBillingDate=DateTime.Now.AddDays(45), DaysUntilBilling=45, IconEmoji="✏️", IsActive=true }, new() { Id=4, Name="Spotify", Category="음악", Currency="USD", Amount=10.99m, AmountInKRW=15166, MonthlyAmountInKRW=15166, BillingCycle="MONTHLY", StartDate=DateTime.Today.AddMonths(-5), NextBillingDate=DateTime.Now.AddDays(3), DaysUntilBilling=3, IconEmoji="🎵", IsActive=true }, new() { Id=5, Name="GitHub Copilot", Category="개발 도구", Currency="USD", Amount=10m, AmountInKRW=13800, MonthlyAmountInKRW=13800, BillingCycle="MONTHLY", StartDate=DateTime.Today.AddMonths(-2), NextBillingDate=DateTime.Now.AddDays(20), DaysUntilBilling=20, IconEmoji="💻", IsActive=true } };
 }
