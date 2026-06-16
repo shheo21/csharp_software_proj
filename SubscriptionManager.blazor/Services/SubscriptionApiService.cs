@@ -12,6 +12,10 @@ public interface ISubscriptionApiService
     Task<DashboardSummary> GetDashboardAsync();
     Task<List<ExchangeRateSummary>> GetExchangeRatesAsync();
     Task<SpendingTrendsDto> GetSpendingTrendsAsync(int months = 12);
+    Task<List<NotificationDto>> GetNotificationsAsync(bool unreadOnly = false);
+    Task<int> GetUnreadNotificationCountAsync();
+    Task MarkNotificationAsReadAsync(int id);
+    Task MarkAllNotificationsAsReadAsync();
 }
 
 public class SubscriptionApiService : ISubscriptionApiService
@@ -100,6 +104,30 @@ public class SubscriptionApiService : ISubscriptionApiService
         var boundedMonths = Math.Clamp(months, 1, 24);
         return await _http.GetFromJsonAsync<SpendingTrendsDto>(
             $"api/subscriptions/spending-trends?months={boundedMonths}") ?? new();
+    }
+
+    public async Task<List<NotificationDto>> GetNotificationsAsync(bool unreadOnly = false)
+    {
+        var url = unreadOnly ? "api/notifications?unreadOnly=true" : "api/notifications";
+        return await _http.GetFromJsonAsync<List<NotificationDto>>(url) ?? new();
+    }
+
+    public async Task<int> GetUnreadNotificationCountAsync()
+    {
+        var response = await _http.GetFromJsonAsync<UnreadCountResponse>("api/notifications/unread-count");
+        return response?.Count ?? 0;
+    }
+
+    public async Task MarkNotificationAsReadAsync(int id)
+    {
+        var response = await _http.PatchAsync($"api/notifications/{id}/read", null);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task MarkAllNotificationsAsReadAsync()
+    {
+        var response = await _http.PatchAsync("api/notifications/read-all", null);
+        response.EnsureSuccessStatusCode();
     }
 
     private async Task RenewOverdueBillingDatesAsync(List<SubscriptionDto> subscriptions)

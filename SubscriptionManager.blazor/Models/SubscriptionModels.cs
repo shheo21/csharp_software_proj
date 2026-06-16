@@ -100,6 +100,37 @@ public class CategoryMonthlyAmount
     public decimal AmountKRW { get; set; }
 }
 
+public class NotificationDto
+{
+    public int Id { get; set; }
+    public int SubscriptionId { get; set; }
+    public string SubscriptionName { get; set; } = string.Empty;
+    public string Category { get; set; } = string.Empty;
+    public string? IconEmoji { get; set; }
+    public string Type { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+    public string Severity { get; set; } = string.Empty;
+    public DateTime RenewalDate { get; set; }
+    public int DaysUntilRenewal { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? ReadAt { get; set; }
+    public bool IsRead { get; set; }
+
+    public string DaysLabel => DaysUntilRenewal switch
+    {
+        0 => "오늘",
+        1 => "D-1",
+        < 0 => "결제 완료",
+        _ => $"D-{DaysUntilRenewal}"
+    };
+}
+
+public class UnreadCountResponse
+{
+    public int Count { get; set; }
+}
+
 public class LoginRequest
 {
     public string Email { get; set; } = string.Empty;

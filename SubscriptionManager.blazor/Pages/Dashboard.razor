@@ -3,6 +3,7 @@
 @inject ISubscriptionApiService ApiService
 @inject ICategoryService CategoryService
 @inject NavigationManager Nav
+@inject ISnackbar Snackbar
 
 <PageTitle>대시보드 — SubTrack</PageTitle>
 
@@ -183,17 +184,23 @@
 
     protected override async Task OnInitializedAsync()
     {
-        try { await LoadData(); }
-        catch { _summary = GetMockData(); _loading = false; }
+        await LoadData();
     }
 
     private async Task LoadData()
     {
         _loading = true;
         StateHasChanged();
-        try { _summary = await ApiService.GetDashboardAsync(); }
-        catch { _summary = GetMockData(); }
-        await CategoryService.EnsureLoadedAsync(_summary.CategoryBreakdown.Select(c => c.Category));
+        try
+        {
+            _summary = await ApiService.GetDashboardAsync();
+            await CategoryService.EnsureLoadedAsync(_summary.CategoryBreakdown.Select(c => c.Category));
+        }
+        catch
+        {
+            _summary = null;
+            Snackbar.Add("대시보드 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.", Severity.Error);
+        }
         _loading = false;
     }
 
@@ -220,26 +227,4 @@
         }
         return result;
     }
-
-    private DashboardSummary GetMockData() => new DashboardSummary
-    {
-        TotalMonthlyKRW = 145800,
-        TotalYearlyKRW = 1749600,
-        ActiveCount = 5,
-        UpcomingBilling = new List<SubscriptionDto>
-        {
-            new() { Name="Spotify", Category="음악", Currency="USD", Amount=10.99m, AmountInKRW=15166, BillingCycle="MONTHLY", DaysUntilBilling=3, IconEmoji="🎵" },
-            new() { Name="Netflix", Category="엔터테인먼트", Currency="KRW", Amount=17000, AmountInKRW=17000, BillingCycle="MONTHLY", DaysUntilBilling=5, IconEmoji="🎬" },
-            new() { Name="Adobe CC", Category="창작 도구", Currency="USD", Amount=54.99m, AmountInKRW=75886, BillingCycle="MONTHLY", DaysUntilBilling=12, IconEmoji="🎨" },
-            new() { Name="GitHub Copilot", Category="개발 도구", Currency="USD", Amount=10m, AmountInKRW=13800, BillingCycle="MONTHLY", DaysUntilBilling=20, IconEmoji="💻" },
-            new() { Name="CLIP STUDIO", Category="창작 도구", Currency="KRW", Amount=4800, AmountInKRW=4800, BillingCycle="YEARLY", DaysUntilBilling=45, IconEmoji="✏️" },
-        },
-        CategoryBreakdown = new List<CategorySpend>
-        {
-            new() { Category="창작 도구", MonthlyAmountKRW=80286, Count=2 },
-            new() { Category="엔터테인먼트", MonthlyAmountKRW=17000, Count=1 },
-            new() { Category="개발 도구", MonthlyAmountKRW=13800, Count=1 },
-            new() { Category="음악", MonthlyAmountKRW=15166, Count=1 },
-        }
-    };
 }

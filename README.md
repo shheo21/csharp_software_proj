@@ -87,7 +87,7 @@ dotnet watch --project SubscriptionManager.blazor
 dotnet build csharp_software_proj.slnx
 ```
 
-서버 기동 시 DB가 자동 생성되고, 테스트 계정과 Mock 데이터가 시드됩니다.
+서버 기동 시 DB가 자동 생성되고, 테스트 계정과 데모용 샘플 데이터가 시드됩니다.
 
 | 항목 | 값 |
 |---|---|
