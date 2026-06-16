@@ -1,3 +1,101 @@
+# SubTrack
+
+데모 사이트: https://shheo21.github.io/csharp_software_proj/
+
+| 항목 | 값 |
+| --- | --- |
+| 데모 이메일 | `test@example.com` |
+| 데모 비밀번호 | `Test1234!` |
+
+## 로컬 실행
+
+### 사전 요구 사항
+
+- .NET 10 SDK
+- PostgreSQL 12 이상
+- Windows: Command Prompt
+- Linux 또는 MSYS2: Bash
+
+### 환경 설정
+
+`SubscriptionManager.api/appsettings.Development.json` 파일을 생성합니다. 로컬 PostgreSQL 스크립트의 기본값을 그대로 쓰면 `DefaultConnection`은 아래 값입니다.
+
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5432;Database=subtrack;Username=subtrack;Password=localpass"
+  },
+  "Jwt": {
+    "Key": "32자_이상의_시크릿_키"
+  },
+  "ExchangeRate": {
+    "ApiKey": "한국수출입은행_API_키"
+  }
+}
+```
+
+> 한국수출입은행 API 키는 https://www.koreaexim.go.kr 에서 발급받을 수 있습니다.
+
+### 로컬 PostgreSQL 실행
+
+로컬 개발용 PostgreSQL 데이터는 `.local/postgres-data`에 생성되고, 로그는 `.local/postgres.log`에 기록됩니다. `up` 명령은 데이터 디렉터리 초기화, PostgreSQL 시작, 앱용 role/database 생성을 한 번에 수행합니다.
+
+Bash:
+
+```bash
+bash scripts/local-postgres.sh up
+```
+
+Windows Command Prompt:
+
+```bat
+scripts\local-postgres.bat up
+```
+
+Linux 예시:
+
+```bash
+PG_BIN="/usr/lib/postgresql/16/bin" bash scripts/local-postgres.sh up
+```
+
+Windows 예시:
+
+```bat
+set "PG_BIN=C:\Program Files\PostgreSQL\16\bin"
+scripts\local-postgres.bat up
+```
+
+스크립트에서 지원하는 주요 명령은 `up`, `init`, `start`, `setup`, `ready`, `stop`, `restart`, `status`, `connstr`입니다.
+
+### 애플리케이션 실행
+
+API는 Blazor 앱의 `HttpClient` 기본 주소와 맞추기 위해 `https` 프로필로 실행합니다.
+
+```powershell
+dotnet watch --project SubscriptionManager.api --launch-profile https
+```
+
+Blazor 프론트엔드는 별도 터미널에서 실행합니다.
+
+```powershell
+dotnet watch --project SubscriptionManager.blazor
+```
+
+전체 솔루션 빌드:
+
+```bash
+dotnet build csharp_software_proj.slnx
+```
+
+서버 기동 시 DB가 자동 생성되고, 테스트 계정과 Mock 데이터가 시드됩니다.
+
+| 항목 | 값 |
+|---|---|
+| 테스트 이메일 | `test@example.com` |
+| 테스트 비밀번호 | `Test1234!` |
+| Swagger UI | `https://localhost:7188/swagger` |
+| Blazor 앱 | `https://localhost:7000` |
+
 # SubscriptionManager API
 
 구독 서비스를 관리하는 RESTful API입니다. JWT 인증 기반으로 사용자별 구독 등록·조회·수정·삭제와 지출 분석, 알림, 실시간 환율 변환을 제공합니다.
@@ -10,45 +108,6 @@
 - **DB**: PostgreSQL
 - **인증**: ASP.NET Core Identity + JWT Bearer + Refresh Token
 - **문서화**: Swagger / OpenAPI
-
----
-
-## 시작하기
-
-### 사전 요구 사항
-
-- .NET 10 SDK
-
-### 환경 설정
-
-`appsettings.Development.json` 파일을 프로젝트 루트에 생성합니다.
-
-```json
-{
-  "Jwt": {
-    "Key": "32자_이상의_시크릿_키"
-  },
-  "ExchangeRate": {
-    "ApiKey": "한국수출입은행_API_키"
-  }
-}
-```
-
-> 한국수출입은행 API 키는 https://www.koreaexim.go.kr 에서 발급받을 수 있습니다.
-
-### 실행
-
-```bash
-dotnet run --project SubscriptionManager.api
-```
-
-서버 기동 시 DB가 자동 생성되고, 테스트 계정과 Mock 데이터가 시드됩니다.
-
-| 항목 | 값 |
-|---|---|
-| 테스트 이메일 | `test@example.com` |
-| 테스트 비밀번호 | `Test1234!` |
-| Swagger UI | `https://localhost:{port}/swagger` |
 
 ---
 
