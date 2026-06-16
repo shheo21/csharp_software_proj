@@ -265,9 +265,10 @@
         { 
             _subscriptions = await ApiService.GetSubscriptionsAsync(); 
         }
-        catch 
+        catch
         { 
-            _subscriptions = GetMockSubscriptionsForCalendar(); 
+            _subscriptions = new();
+            Snackbar.Add("일정을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.", Severity.Error);
         }
         
         // 고유 카테고리 추출
@@ -382,21 +383,5 @@
     {
         public DateTime Date { get; set; }
         public bool IsCurrentMonth { get; set; }
-    }
-
-    // 달력 화면 테스트를 위해 날짜가 골고루 퍼진 가짜 데이터 생성
-    private List<SubscriptionDto> GetMockSubscriptionsForCalendar() 
-    {
-        var now = DateTime.Today;
-        return new List<SubscriptionDto> 
-        { 
-            new() { Name="Netflix", Category="엔터테인먼트", AmountInKRW=17000, BillingCycle="MONTHLY", NextBillingDate=new DateTime(now.Year, now.Month, 31), IconEmoji="🎬", IsActive=true }, // 31일 테스트
-            new() { Name="Spotify", Category="음악", AmountInKRW=15166, BillingCycle="MONTHLY", NextBillingDate=new DateTime(now.Year, now.Month, 12), IconEmoji="🎵", IsActive=true }, 
-            new() { Name="YouTube Premium", Category="엔터테인먼트", AmountInKRW=14900, BillingCycle="MONTHLY", NextBillingDate=new DateTime(now.Year, now.Month, 12), IconEmoji="▶️", IsActive=true }, 
-            new() { Name="Adobe CC", Category="창작 도구", AmountInKRW=75886, BillingCycle="MONTHLY", NextBillingDate=new DateTime(now.Year, now.Month, 20), IconEmoji="🎨", IsActive=true }, 
-            new() { Name="GitHub Copilot", Category="개발 도구", AmountInKRW=13800, BillingCycle="MONTHLY", NextBillingDate=new DateTime(now.Year, now.Month, 20), IconEmoji="💻", IsActive=true },
-            new() { Name="ChatGPT Plus", Category="기타", AmountInKRW=29000, BillingCycle="MONTHLY", NextBillingDate=new DateTime(now.Year, now.Month, 28), IconEmoji="🤖", IsActive=true },
-            new() { Name="CLIP STUDIO", Category="창작 도구", AmountInKRW=4800, BillingCycle="YEARLY", NextBillingDate=new DateTime(now.Year, now.Month, 2), IconEmoji="✏️", IsActive=true }
-        };
     }
 }

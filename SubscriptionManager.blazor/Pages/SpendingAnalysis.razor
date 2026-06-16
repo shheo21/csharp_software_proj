@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @inject ISubscriptionApiService ApiService
 @inject ICategoryService CategoryService
+@inject ISnackbar Snackbar
 
 <PageTitle>지출 분석 — SubTrack</PageTitle>
 
@@ -748,8 +749,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        try { await LoadData(); }
-        catch { _data = GetMockData(); _loading = false; }
+        await LoadData();
     }
 
     private async Task SetMonths(int months)
@@ -782,13 +782,14 @@
         try
         {
             _data = await ApiService.GetSpendingTrendsAsync(_selectedMonths);
+            await CategoryService.EnsureLoadedAsync(_data.CategoryBreakdown.Select(c => c.Category));
         }
         catch
         {
-            _data = GetMockData();
+            _data = null;
+            Snackbar.Add("지출 분석 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.", Severity.Error);
         }
 
-        await CategoryService.EnsureLoadedAsync(_data.CategoryBreakdown.Select(c => c.Category));
         _loading = false;
     }
 
@@ -913,48 +914,5 @@
         sb.Append($"<line x1=\"{marginLeft}\" y1=\"{marginTop + plotH}\" x2=\"{marginLeft + plotW}\" y2=\"{marginTop + plotH}\" stroke=\"rgba(255,255,255,0.1)\" stroke-width=\"1\"/>");
         sb.Append("</svg>");
         return sb.ToString();
-    }
-
-    private SpendingTrendsDto GetMockData()
-    {
-        var now = DateTime.Now;
-        var rng = new Random(42);
-        var trends = Enumerable.Range(0, _selectedMonths)
-            .Select(i =>
-            {
-                var month = new DateTime(now.Year, now.Month, 1).AddMonths(-(_selectedMonths - 1 - i));
-                var isYearlyMonth = i % 12 == 0;
-                var baseAmt = 89400m + (isYearlyMonth ? 75840m : 0m);
-                return new MonthlyTrend
-                {
-                    Month = month.ToString("yyyy-MM"),
-                    Label = month.ToString("yy년 M월"),
-                    TotalKRW = baseAmt + (decimal)(rng.NextDouble() * 5000 - 2500),
-                    ByCategory = new List<CategoryMonthlyAmount>
-                    {
-                        new() { Category = "창작 도구", AmountKRW = 75840 },
-                        new() { Category = "엔터테인먼트", AmountKRW = 22060 },
-                        new() { Category = "음악", AmountKRW = 13790 },
-                    }
-                };
-            }).ToList();
-
-        return new SpendingTrendsDto
-        {
-            MonthlyTrends = trends,
-            TotalMonthlyKRW = 89400,
-            TotalYearlyKRW = 1072800,
-            ActiveCount = 6,
-            TopCategory = "창작 도구",
-            AverageMonthlyKRW = (decimal)trends.Average(t => (double)t.TotalKRW),
-            CategoryBreakdown = new List<CategorySpend>
-            {
-                new() { Category = "창작 도구", MonthlyAmountKRW = 75840, Count = 2 },
-                new() { Category = "엔터테인먼트", MonthlyAmountKRW = 22060, Count = 1 },
-                new() { Category = "음악", MonthlyAmountKRW = 13790, Count = 1 },
-                new() { Category = "개발 도구", MonthlyAmountKRW = 6210, Count = 1 },
-                new() { Category = "클라우드 스토리지", MonthlyAmountKRW = 3300, Count = 1 },
-            }
-        };
     }
 }

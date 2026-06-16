@@ -51,7 +51,7 @@ call :Usage 1>&2
 exit /b 1
 
 :Usage
-echo Usage: scripts\local-postgres-windows.bat ^<command^>
+echo Usage: scripts\local-postgres.bat ^<command^>
 echo.
 echo Commands:
 echo   up         Initialize, start, and create/update app role/database
@@ -77,8 +77,8 @@ echo   APP_PASSWORD  App database password. Default: localpass
 echo.
 echo Examples:
 echo   set "PG_BIN=C:\Program Files\PostgreSQL\16\bin"
-echo   scripts\local-postgres-windows.bat up
-echo   scripts\local-postgres-windows.bat connstr
+echo   scripts\local-postgres.bat up
+echo   scripts\local-postgres.bat connstr
 exit /b 0
 
 :ConvertMsysPath
@@ -125,7 +125,7 @@ for %%D in ("C:\msys64\ucrt64\bin" "C:\msys64\mingw64\bin") do (
 echo PostgreSQL binaries were not found. 1>&2
 echo Set PG_BIN, for example: 1>&2
 echo   set "PG_BIN=C:\Program Files\PostgreSQL\16\bin" 1>&2
-echo   scripts\local-postgres-windows.bat init 1>&2
+echo   scripts\local-postgres.bat init 1>&2
 exit /b 1
 
 :GetPgExe

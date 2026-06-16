@@ -352,7 +352,8 @@
         }
         catch
         {
-            _subscriptions = GetMockSubscriptions();
+            _subscriptions = new();
+            Snackbar.Add("구독 목록을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.", Severity.Error);
             await CategoryService.EnsureLoadedAsync();
         }
         finally { _loading = false; }
@@ -438,6 +439,4 @@
     private string GetCategoryChipStyle(string category) => category switch { "엔터테인먼트" => "color: #ff4d4f; border-color: rgba(255,77,79,0.5); background: rgba(255,77,79,0.05);", "창작 도구" => "color: #ff75c3; border-color: rgba(255,117,195,0.5); background: rgba(255,117,195,0.05);", "음악" => "color: #b37feb; border-color: rgba(179,127,235,0.5); background: rgba(179,127,235,0.05);", "개발 도구" => "color: #69c0ff; border-color: rgba(105,192,255,0.5); background: rgba(105,192,255,0.05);", _ => "color: var(--text-secondary); border-color: rgba(255,255,255,0.2);" };
     
     private string GetDDayChipStyle(int days) => days <= 3 ? "color: #ff4d4f; border-color: rgba(255,77,79,0.5); background: rgba(255,77,79,0.05);" : days <= 7 ? "color: #faad14; border-color: rgba(250,173,20,0.5); background: rgba(250,173,20,0.05);" : "color: #52c41a; border-color: rgba(82,196,26,0.5); background: rgba(82,196,26,0.05);";
-    
-    private List<SubscriptionDto> GetMockSubscriptions() => new() { new() { Id=1, Name="Netflix", Category="엔터테인먼트", Currency="KRW", Amount=17000, AmountInKRW=17000, MonthlyAmountInKRW=17000, BillingCycle="MONTHLY", StartDate=DateTime.Today.AddMonths(-6), NextBillingDate=DateTime.Now.AddDays(5), DaysUntilBilling=5, IconEmoji="🎬", IsActive=true }, new() { Id=2, Name="Adobe Creative Cloud", Category="창작 도구", Currency="USD", Amount=54.99m, AmountInKRW=75886, MonthlyAmountInKRW=75886, BillingCycle="MONTHLY", StartDate=DateTime.Today.AddMonths(-4), NextBillingDate=DateTime.Now.AddDays(12), DaysUntilBilling=12, IconEmoji="🎨", IsActive=true }, new() { Id=3, Name="CLIP STUDIO PAINT", Category="창작 도구", Currency="KRW", Amount=4800, AmountInKRW=4800, MonthlyAmountInKRW=400, BillingCycle="YEARLY", StartDate=DateTime.Today.AddYears(-1), NextBillingDate=DateTime.Now.AddDays(45), DaysUntilBilling=45, IconEmoji="✏️", IsActive=true }, new() { Id=4, Name="Spotify", Category="음악", Currency="USD", Amount=10.99m, AmountInKRW=15166, MonthlyAmountInKRW=15166, BillingCycle="MONTHLY", StartDate=DateTime.Today.AddMonths(-5), NextBillingDate=DateTime.Now.AddDays(3), DaysUntilBilling=3, IconEmoji="🎵", IsActive=true }, new() { Id=5, Name="GitHub Copilot", Category="개발 도구", Currency="USD", Amount=10m, AmountInKRW=13800, MonthlyAmountInKRW=13800, BillingCycle="MONTHLY", StartDate=DateTime.Today.AddMonths(-2), NextBillingDate=DateTime.Now.AddDays(20), DaysUntilBilling=20, IconEmoji="💻", IsActive=true } };
 }
